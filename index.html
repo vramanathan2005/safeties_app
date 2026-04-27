@@ -131,7 +131,7 @@
         }
         
         .hint-text {
-            font-size: 16px;
+            font-size: 15px;
             font-weight: 500;
             color: #4A5568;
             margin-left: auto;
@@ -141,6 +141,25 @@
             padding: 10px 15px;
             border-radius: 8px;
             border-left: 4px solid var(--primary);
+            flex: 1;
+        }
+        
+        .btn-clear {
+            background-color: #E2E8F0;
+            color: #2C3E50;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: none;
+            height: 42px;
+        }
+        .btn-clear:hover {
+            background-color: #CBD5E1;
+            transform: translateY(-1px);
         }
         
         #plot {
@@ -263,23 +282,28 @@
         
         <!-- Plot Panel -->
         <div class="panel">
-            <div class="controls-row">
-                <div class="control-group">
-                    <label for="x-select">X-Axis Metric</label>
-                    <select id="x-select"></select>
+            <div class="controls-row" style="flex-wrap: wrap;">
+                <div style="display: flex; gap: 20px; width: 100%;">
+                    <div class="control-group">
+                        <label for="x-select">X-Axis Metric</label>
+                        <select id="x-select"></select>
+                    </div>
+                    <div class="control-group">
+                        <label for="y-select">Y-Axis Metric</label>
+                        <select id="y-select"></select>
+                    </div>
+                    <div class="control-group" style="justify-content: flex-end; padding-bottom: 8px; margin-left: 10px;">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; margin: 0; color: var(--text-dark);">
+                            <input type="checkbox" id="toggle-recruits" checked style="width: 18px; height: 18px; accent-color: var(--primary);">
+                            Show High School Recruits
+                        </label>
+                    </div>
+                    <div class="control-group" style="justify-content: flex-end; padding-bottom: 8px; margin-left: auto;">
+                        <button id="clear-selection" class="btn-clear">Clear Selection</button>
+                    </div>
                 </div>
-                <div class="control-group">
-                    <label for="y-select">Y-Axis Metric</label>
-                    <select id="y-select"></select>
-                </div>
-                <div class="control-group" style="justify-content: flex-end; padding-bottom: 8px; margin-left: 10px;">
-                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; margin: 0; color: var(--text-dark);">
-                        <input type="checkbox" id="toggle-recruits" checked style="width: 18px; height: 18px; accent-color: var(--primary);">
-                        Show High School Recruits
-                    </label>
-                </div>
-                <div class="hint-text">
-                    <i>Select same metric for Histogram, different metrics for Scatter Plot. Click & Drag to filter players. Larger dots indicate earlier draft rounds.</i>
+                <div class="hint-text" style="width: 100%; margin-top: 15px;">
+                    <i>Select same metric for Histogram. Click or Drag on plot to filter. Hold Shift to select multiple bars. Double-click background to clear.</i>
                 </div>
             </div>
             <div id="plot"></div>
@@ -338,16 +362,32 @@
         const xSelect = document.getElementById('x-select');
         const ySelect = document.getElementById('y-select');
         
-        for (const [key, val] of Object.entries(metricConfig)) {
-            const opt1 = document.createElement('option');
-            opt1.value = key;
-            opt1.text = val.label;
-            xSelect.appendChild(opt1);
+        const categories = {
+            'Physical Measurements': ['HT', 'WT'],
+            'Athletic Testing (Combine/Track)': ['40', '100M', 'VERT', 'BROAD', 'SHUT', 'LJ', 'SHOT'],
+            'On-Field Production (Stats)': ['GP', 'SOLO', 'ASST', 'TKLS', 'T/G', 'TFL', 'INT', 'PD']
+        };
+        
+        for (const [catName, keys] of Object.entries(categories)) {
+            const optgroup1 = document.createElement('optgroup');
+            optgroup1.label = catName;
+            const optgroup2 = document.createElement('optgroup');
+            optgroup2.label = catName;
             
-            const opt2 = document.createElement('option');
-            opt2.value = key;
-            opt2.text = val.label;
-            ySelect.appendChild(opt2);
+            for (const key of keys) {
+                if (!metricConfig[key]) continue;
+                const opt1 = document.createElement('option');
+                opt1.value = key;
+                opt1.text = metricConfig[key].label;
+                optgroup1.appendChild(opt1);
+                
+                const opt2 = document.createElement('option');
+                opt2.value = key;
+                opt2.text = metricConfig[key].label;
+                optgroup2.appendChild(opt2);
+            }
+            xSelect.appendChild(optgroup1);
+            ySelect.appendChild(optgroup2);
         }
         
         // Set Defaults
@@ -479,6 +519,58 @@
         }
         
         let currentValidData = [];
+        let traceDataMap = {};
+        let selectedIndicesByTrace = {};
+        
+        function clearSelection() {
+            Object.keys(selectedIndicesByTrace).forEach(k => selectedIndicesByTrace[k].clear());
+            const plotDiv = document.getElementById('plot');
+            if (plotDiv && plotDiv.data) {
+                Plotly.restyle('plot', 'selectedpoints', null);
+            }
+            document.getElementById('clear-selection').style.display = 'none';
+            renderCards(currentValidData);
+        }
+        
+        function applySelectionToPlot() {
+            let hasSelection = false;
+            Object.keys(selectedIndicesByTrace).forEach(k => {
+                if (selectedIndicesByTrace[k].size > 0) hasSelection = true;
+            });
+            
+            if (!hasSelection) {
+                clearSelection();
+                return;
+            }
+            
+            const plotDiv = document.getElementById('plot');
+            if (!plotDiv || !plotDiv.data) return;
+            
+            let selectedArr = [];
+            for(let i=0; i<plotDiv.data.length; i++) {
+                if (selectedIndicesByTrace[i] && selectedIndicesByTrace[i].size > 0) {
+                    selectedArr.push(Array.from(selectedIndicesByTrace[i]));
+                } else {
+                    selectedArr.push([]);
+                }
+            }
+            
+            Plotly.restyle('plot', {'selectedpoints': selectedArr});
+            
+            let filtered = [];
+            Object.keys(selectedIndicesByTrace).forEach(traceIdx => {
+                if (selectedIndicesByTrace[traceIdx].size > 0 && traceDataMap[traceIdx]) {
+                    selectedIndicesByTrace[traceIdx].forEach(idx => {
+                        if (traceDataMap[traceIdx][idx]) {
+                            filtered.push(traceDataMap[traceIdx][idx]);
+                        }
+                    });
+                }
+            });
+            
+            document.getElementById('clear-selection').style.display = 'block';
+            renderCards(filtered);
+        }
         
         function drawPlot() {
             const xField = xSelect.value;
@@ -490,6 +582,10 @@
             if (!showRecruits) {
                 activePlayers = players.filter(p => !p.is_recruit);
             }
+            
+            // Clear prior state
+            traceDataMap = {};
+            selectedIndicesByTrace = {};
             
             if (isHistogram) {
                 // HISTOGRAM MODE
@@ -533,7 +629,9 @@
                     marker: { color: '#A9A9A9' },
                     opacity: 0.8,
                     name: 'Drafted',
-                    hoverinfo: 'x+y'
+                    hoverinfo: 'x+y',
+                    selected: { marker: { opacity: 0.8 } },
+                    unselected: { marker: { opacity: 0.3 } }
                 }];
                 
                 if (recruitPlayers.length > 0) {
@@ -551,7 +649,9 @@
                             symbol: 'diamond'
                         },
                         hoverinfo: 'x+text',
-                        cliponaxis: false
+                        cliponaxis: false,
+                        selected: { marker: { opacity: 1 } },
+                        unselected: { marker: { opacity: 0.3 } }
                     });
                 }
                 
@@ -561,7 +661,7 @@
                     yaxis: { title: 'Number of Players' },
                     dragmode: 'select',
                     hovermode: 'closest',
-                    clickmode: 'event+select',
+                    clickmode: 'event',
                     showlegend: false,
                     shapes: [
                         {type: 'line', x0: p50, x1: p50, y0: 0, y1: 1, yref: 'paper', line: {color: '#333', dash: 'dash', width: 2}},
@@ -581,9 +681,14 @@
                 
                 if (metricConfig[xField].type === 'speed') layout.xaxis.autorange = 'reversed';
                 
-                // IMPORTANT: Ensure currentValidData maps 1:1 with the points for pointNumbers fallback
-                currentValidData = [...draftedPlayers, ...recruitPlayers];
+                traceDataMap[0] = draftedPlayers;
+                selectedIndicesByTrace[0] = new Set();
+                if (recruitPlayers.length > 0) {
+                    traceDataMap[1] = recruitPlayers;
+                    selectedIndicesByTrace[1] = new Set();
+                }
                 
+                document.getElementById('clear-selection').style.display = 'none';
                 Plotly.newPlot('plot', traces, layout, {displayModeBar: false});
                 
             } else {
@@ -620,7 +725,9 @@
                         }), 
                         opacity: 0.8, 
                         line: {width: 1, color: 'white'}
-                    }
+                    },
+                    selected: { marker: { opacity: 1 } },
+                    unselected: { marker: { opacity: 0.2 } }
                 };
                 
                 const layout = {
@@ -629,7 +736,7 @@
                     yaxis: { title: metricConfig[yField].label },
                     dragmode: 'select',
                     hovermode: 'closest',
-                    clickmode: 'event+select',
+                    clickmode: 'event',
                     plot_bgcolor: 'white',
                     paper_bgcolor: 'white',
                     margin: { t: 60 }
@@ -638,50 +745,57 @@
                 if (metricConfig[xField].type === 'speed') layout.xaxis.autorange = 'reversed';
                 if (metricConfig[yField].type === 'speed') layout.yaxis.autorange = 'reversed';
                 
+                traceDataMap[0] = currentValidData;
+                selectedIndicesByTrace[0] = new Set();
+                
+                document.getElementById('clear-selection').style.display = 'none';
                 Plotly.newPlot('plot', [trace], layout, {displayModeBar: false});
             }
             
-            // Re-bind Selection Event
-            function handleSelection(eventData) {
-                if (eventData === undefined) {
-                    renderCards(currentValidData);
-                } else {
-                    let filtered = [];
-                    if (isHistogram) {
-                        // Histogram selection gives x bounds or pointNumbers
-                        // If we use pointNumbers we can lookup in currentValidData
-                        let indices = new Set();
-                        eventData.points.forEach(pt => {
-                            if (pt.pointNumbers) {
-                                pt.pointNumbers.forEach(idx => indices.add(idx));
-                            } else if (pt.pointIndex !== undefined) {
-                                indices.add(pt.pointIndex);
-                            }
-                        });
-                        if (indices.size > 0) {
-                            filtered = Array.from(indices).map(idx => currentValidData[idx]);
+            // Re-bind Custom Selection Events
+            const plotEl = document.getElementById('plot');
+            plotEl.removeAllListeners('plotly_selected');
+            plotEl.removeAllListeners('plotly_click');
+            plotEl.removeAllListeners('plotly_deselect');
+            
+            plotEl.on('plotly_click', function(eventData) {
+                if (eventData === undefined) return;
+                let changed = false;
+                eventData.points.forEach(pt => {
+                    const curve = pt.curveNumber;
+                    if (!selectedIndicesByTrace[curve]) selectedIndicesByTrace[curve] = new Set();
+                    
+                    let indices = pt.pointNumbers || [pt.pointIndex];
+                    indices.forEach(idx => {
+                        if (selectedIndicesByTrace[curve].has(idx)) {
+                            selectedIndicesByTrace[curve].delete(idx);
                         } else {
-                            // Fallback if pointNumbers isn't supported in this Plotly version
-                            const selectedX = eventData.points.map(pt => pt.x);
-                            const minX = Math.min(...selectedX);
-                            const maxX = Math.max(...selectedX);
-                            filtered = currentValidData.filter(p => p[xField] >= minX && p[xField] <= maxX);
+                            selectedIndicesByTrace[curve].add(idx);
                         }
-                    } else {
-                        // Scatter plot selection gives pointIndex
-                        const indices = eventData.points.map(pt => pt.pointIndex);
-                        filtered = indices.map(idx => currentValidData[idx]);
-                    }
-                    renderCards(filtered);
-                }
-            }
-            
-            document.getElementById('plot').on('plotly_selected', handleSelection);
-            document.getElementById('plot').on('plotly_click', handleSelection);
-            
-            document.getElementById('plot').on('plotly_deselect', function() {
-                renderCards(currentValidData);
+                        changed = true;
+                    });
+                });
+                if (changed) applySelectionToPlot();
             });
+            
+            plotEl.on('plotly_selected', function(eventData) {
+                if (eventData === undefined) {
+                    clearSelection();
+                    return;
+                }
+                Object.keys(selectedIndicesByTrace).forEach(k => selectedIndicesByTrace[k].clear());
+                
+                eventData.points.forEach(pt => {
+                    const curve = pt.curveNumber;
+                    if (!selectedIndicesByTrace[curve]) selectedIndicesByTrace[curve] = new Set();
+                    
+                    let indices = pt.pointNumbers || [pt.pointIndex];
+                    indices.forEach(idx => selectedIndicesByTrace[curve].add(idx));
+                });
+                applySelectionToPlot();
+            });
+            
+            plotEl.on('plotly_deselect', clearSelection);
             
             // Initial table render for valid data
             renderCards(currentValidData);
@@ -691,6 +805,8 @@
         xSelect.addEventListener('change', drawPlot);
         ySelect.addEventListener('change', drawPlot);
         document.getElementById('toggle-recruits').addEventListener('change', drawPlot);
+        
+        document.getElementById('clear-selection').addEventListener('click', clearSelection);
         
         // Initial Plot
         drawPlot();
