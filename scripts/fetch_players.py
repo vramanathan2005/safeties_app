@@ -3,18 +3,12 @@ import json
 import time
 import pandas as pd
 
-players_list = [
-    "Danny Lang", "Braylon Deal", "JayQuan Snell", "Eli Johnson", "Adryan Cole",
-    "Isala Wily-Ava", "Omarii Sanders", "Gavin Williams", "Jamarquis Hudson", "Isaiah Udom",
-    "Aiden Evans", "Peyton Shaw", "Elijajuan Houston", "Chance Gilbert", "Jeremiah Proctor",
-    "Myles Baker", "Mikyal Davis", "Honor Fa’alave-Johnson", "Greedy James", "Jayden Aparicio-Bailey",
-    "Dillon Davis", "James Roberson", "Kamarui Dorsey", "Semai Stanford", "Jaylen Scott",
-    "Aaryn Washington", "Davontrae Kirkland", "Bode Sparrow", "Tory Pittman III", "Malakai Taufoou",
-    "Khalil Terry", "Ta’Shawn Poole", "Jaylyn Jones", "Davion Jones", "Corey Hadley Jr.",
-    "Kevin “KJ” Caldwell Jr.", "Karon Eugene", "Jernard Albright", "Alex Scott", "Tavon Bolden",
-    "Junior Tu’upo", "Quincy Carter", "Braiden Graves", "Kailib Dillard", "Hakim Frampton",
-    "Aiden Martin", "Jaiden ‘JJ’ Fields", "Joshua Vilmael", "Pole Moala", "Jeovanni Henley"
-]
+from recruit_sources import (
+    UCREPORT_PATH,
+    attach_board_fields,
+    load_recruit_board,
+    normalize_name,
+)
 
 session = requests.Session()
 session.headers.update({
@@ -64,9 +58,11 @@ def fetch_player(first_name, last_name):
         # We need to filter based on first name since the API just searches last name
         matched = []
         for p in players_data:
+            if not isinstance(p, dict):
+                continue
             # handle cases like "Kevin “KJ”" matching "Kevin"
-            api_first = p.get('first', '').lower()
-            query_first_parts = first_name.lower().replace('“', '').replace('”', '').replace('‘', '').replace('’', '').split()
+            api_first = normalize_name(p.get('first', ''))
+            query_first_parts = normalize_name(first_name).split()
             
             # If any part of the requested first name is in the API first name, consider it a match
             for part in query_first_parts:
@@ -80,20 +76,15 @@ def fetch_player(first_name, last_name):
         return []
 
 all_scraped_data = []
+recruit_board = load_recruit_board()
 
-print(f"Starting scrape for {len(players_list)} players...")
-for player_name in players_list:
-    parts = player_name.split()
-    if len(parts) >= 2:
-        # Simple split, might need refining for "Jr." or multi-word last names
-        # e.g. "Corey Hadley Jr." -> First: Corey, Last: Hadley Jr.
-        if parts[-1].lower() in ['jr.', 'jr', 'iii', 'ii']:
-            last_name = parts[-2]
-            first_name = " ".join(parts[:-2])
-        else:
-            last_name = parts[-1]
-            first_name = " ".join(parts[:-1])
-    else:
+print(f"Starting scrape for {len(recruit_board)} players from 2027_recruits.csv...")
+for _, board_row in recruit_board.iterrows():
+    player_name = board_row["query_name"]
+    first_name = board_row["query_first"]
+    last_name = board_row["query_last"]
+    if not first_name or not last_name:
+        print(f"Skipping malformed name: {player_name}")
         continue
         
     print(f"Fetching: {first_name} {last_name}...")
@@ -103,8 +94,7 @@ for player_name in players_list:
         # Take the most recently updated one if there are multiple matches
         # or just the first one
         best_match = matched_players[0]
-        # Add the original query name for reference
-        best_match['query_name'] = player_name
+        attach_board_fields(best_match, board_row)
         all_scraped_data.append(best_match)
         print(f"  -> Found! (ID: {best_match.get('player_id')})")
     else:
@@ -112,10 +102,9 @@ for player_name in players_list:
         
     time.sleep(0.5) # Be polite to the API
 
-print(f"\nScraping complete. Found {len(all_scraped_data)} out of {len(players_list)} players.")
+print(f"\nScraping complete. Found {len(all_scraped_data)} out of {len(recruit_board)} players.")
 
 if all_scraped_data:
     df = pd.DataFrame(all_scraped_data)
-    output_file = "ucreport_data.csv"
-    df.to_csv(output_file, index=False)
-    print(f"Saved data to {output_file}")
+    df.to_csv(UCREPORT_PATH, index=False)
+    print(f"Saved data to {UCREPORT_PATH}")

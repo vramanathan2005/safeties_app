@@ -1,5 +1,9 @@
 import requests
 import json
+from pathlib import Path
+
+ARTIFACT_DIR = Path(__file__).resolve().parent / "artifacts"
+ARTIFACT_DIR.mkdir(exist_ok=True)
 
 url = "https://www.maxpreps.com/_next/data/1777311493/tx/manvel/manvel-mavericks/athletes/karnell-greedy-james-jr/football/stats.json?careerid=ln2n717i44u22"
 headers = {
@@ -11,9 +15,10 @@ try:
     data = r.json()
     props = data.get('pageProps', {})
     if 'statsCardProps' in props:
-        with open("/Users/varunramanathan/.gemini/antigravity/brain/2204b68d-5173-4469-bbf1-be0dea9e31e0/scratch/stats.json", "w") as f:
+        output_path = ARTIFACT_DIR / "stats.json"
+        with open(output_path, "w") as f:
             json.dump(props['statsCardProps'], f, indent=2)
-        print("Saved to stats.json")
+        print(f"Saved to {output_path}")
     else:
         print("No statsCardProps")
 except Exception as e:
