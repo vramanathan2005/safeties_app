@@ -842,18 +842,16 @@ def build_html():
                 const tagText = p.is_recruit ? 'Recruit' : 'Drafted';
                 const draftInfo = p.is_recruit ? 'HS Prospect' : (p.ROUND ? `Round ${{p.ROUND}}` : 'UDFA');
 
-                // Only show metrics that this specific position (and player if possible) has
                 let metricsHtml = '';
-                activePosMetrics.slice(0, 15).forEach(m => {{
+                activePosMetrics.forEach(m => {{
                     const val = p[m];
-                    if (val !== null && !isNaN(val)) {{
-                        metricsHtml += `
-                            <div class="metric-item">
-                                <span class="m-label">${{metricDefs[m].label}}</span>
-                                <span class="m-val">${{formatVal(val, m)}}</span>
-                            </div>
-                        `;
-                    }}
+                    const display = (val != null && !isNaN(val)) ? formatVal(val, m) : '-';
+                    metricsHtml += `
+                        <div class="metric-item">
+                            <span class="m-label">${{metricDefs[m].label}}</span>
+                            <span class="m-val">${{display}}</span>
+                        </div>
+                    `;
                 }});
 
                 card.innerHTML = `
