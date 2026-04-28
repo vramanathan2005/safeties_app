@@ -766,16 +766,20 @@ def build_html():
         currentPos = posSelect.value;
 
         function getActiveMetrics() {{
+            const allowed = positionMetrics[currentPos] || Object.keys(metricDefs);
+            return allowed.filter(k => metricDefs[k]);
+        }}
+
+        function getChartMetrics() {{
             const players = posData[currentPos].players;
             if (!players.length) return [];
-            const allowed = positionMetrics[currentPos] || Object.keys(metricDefs);
-            return allowed.filter(k =>
-                metricDefs[k] && players.some(p => p[k] != null && !isNaN(p[k]))
+            return getActiveMetrics().filter(k =>
+                players.some(p => p[k] != null && !isNaN(p[k]))
             );
         }}
 
         function updateSelectors() {{
-            const active = getActiveMetrics();
+            const active = getChartMetrics();
             xSelect.innerHTML = '';
             ySelect.innerHTML = '';
             active.forEach(m => {{
@@ -804,7 +808,7 @@ def build_html():
             const container = document.getElementById('top-metrics');
             container.innerHTML = '';
             
-            const active = getActiveMetrics();
+            const active = getChartMetrics();
             const core = ['HT', 'WT', '40'];
             // Add a position specific high-level metric
             const specific = active.find(m => !['HT', 'WT', '40', 'GP', '100M', 'SHUT', 'VERT', 'BROAD'].includes(m));
