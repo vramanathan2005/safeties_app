@@ -81,6 +81,9 @@ def build_html():
 
         recruit_df = pd.merge(uc_df, mp_df, on='player_id', how='left')
 
+        # Drop duplicate players (same player_id on multiple board positions)
+        recruit_df = recruit_df.drop_duplicates(subset='player_id', keep='first')
+
         # Save joined CSV so it can be inspected outside the HTML build
         combined_path = os.path.join(recruit_data_path, 'combined_data.csv')
         recruit_df.to_csv(combined_path, index=False)
@@ -684,11 +687,11 @@ def build_html():
             'WING':   {{ label: 'Wingspan',  unit: 'in',  decimals: 1, dtick: 1,    binSize: 1 }},
             'HAND':   {{ label: 'Hand Size', unit: 'in',  decimals: 2, dtick: 0.5,  binSize: 0.25 }},
             'HJ':     {{ label: 'High Jump', unit: 'in',  decimals: 1, dtick: 2,    binSize: 1 }},
-            'LJ':     {{ label: 'Long Jump', unit: 'ft',  decimals: 1, dtick: 1,    binSize: 0.5 }},
-            'TJ':     {{ label: 'Triple Jmp', unit: 'ft', decimals: 1, dtick: 2,    binSize: 1 }},
-            'SHOT':   {{ label: 'Shot Put',  unit: 'ft',  decimals: 1, dtick: 5,    binSize: 2 }},
-            'DISCUS': {{ label: 'Discus',    unit: 'ft',  decimals: 1, dtick: 10,   binSize: 5 }},
-            'JAVELIN':{{ label: 'Javelin',   unit: 'ft',  decimals: 1, dtick: 10,   binSize: 5 }},
+            'LJ':     {{ label: 'Long Jump', unit: 'in',  decimals: 1, dtick: 6,    binSize: 3 }},
+            'TJ':     {{ label: 'Triple Jmp', unit: 'in', decimals: 1, dtick: 12,   binSize: 6 }},
+            'SHOT':   {{ label: 'Shot Put',  unit: 'in',  decimals: 1, dtick: 12,   binSize: 6 }},
+            'DISCUS': {{ label: 'Discus',    unit: 'in',  decimals: 1, dtick: 24,   binSize: 12 }},
+            'JAVELIN':{{ label: 'Javelin',   unit: 'in',  decimals: 1, dtick: 24,   binSize: 12 }},
             // Passing (QB)
             'GP':    {{ label: 'Games',      unit: '', decimals: 0 }},
             'C':     {{ label: 'Completions', unit: '', decimals: 0 }},
