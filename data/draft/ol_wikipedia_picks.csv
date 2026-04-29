@@ -1,0 +1,189 @@
+year,round,pick,team,player,pos,college
+2022,1,6,Carolina Panthers,Ikem Ekwonu,T,NC State
+2022,1,7,New York Giants,Evan Neal,T,Alabama
+2022,1,9,Seattle Seahawks,Charles Cross,T,Mississippi State
+2022,1,15,Houston Texans,Kenyon Green,G,Texas A&M
+2022,1,17,Los Angeles Chargers,Zion Johnson,G,Boston College
+2022,1,19,New Orleans Saints,Trevor Penning,T,Northern Iowa
+2022,1,24,Dallas Cowboys,Tyler Smith†,T,Tulsa
+2022,1,25,Baltimore Ravens,Tyler Linderbaum†,C,Iowa
+2022,1,29,New England Patriots,Cole Strange,G,Chattanooga
+2022,2,51,Philadelphia Eagles,Cam Jurgens†,C,Nebraska
+2022,2,57,Tampa Bay Buccaneers,Luke Goedeke,T,Central Michigan
+2022,2,59,Minnesota Vikings,Ed Ingram,G,LSU
+2022,3,65,Jacksonville Jaguars,Luke Fortner,C,Kentucky
+2022,3,67,New York Giants,Joshua Ezeudu,G,North Carolina
+2022,3,69,Tennessee Titans,Nicholas Petit-Frere,T,Ohio State
+2022,3,72,Seattle Seahawks,Abraham Lucas,T,Washington State
+2022,3,77,Indianapolis Colts,Bernhard Raimann,T,Central Michigan
+2022,3,90,Las Vegas Raiders,Dylan Parham,G,Memphis
+2022,3,92,Green Bay Packers,Sean Rhyan,G,UCLA
+2022,3×,104,Los Angeles Rams,Logan Bruss,G,Wisconsin
+2022,4,110,Baltimore Ravens,Daniel Faalele,T,Minnesota
+2022,4,111,New York Jets,Max Mitchell,T,Louisiana
+2022,4,134,San Francisco 49ers,Spencer Burford,T,UTSA
+2022,4,136,Cincinnati Bengals,Cordell Volson,T,North Dakota State
+2022,4*,140,Green Bay Packers,Zach Tom,G,Wake Forest
+2022,5,145,Kansas City Chiefs,Darian Kinnard,T,Kentucky
+2022,5,155,Dallas Cowboys,Matt Waletzko,T,North Dakota
+2022,5,168,Chicago Bears,Braxton Jones,T,Southern Utah
+2022,5,171,Denver Broncos,Luke Wattenberg,C,Washington
+2022,5,173,New York Giants,Marcus McKethan,G,North Carolina
+2022,6,184,Minnesota Vikings,Vederian Lowe,T,Illinois
+2022,6,186,Chicago Bears,Zachary Thomas,T,San Diego State
+2022,6,187,San Francisco 49ers,Nick Zakelj,T,Fordham
+2022,6,190,Atlanta Falcons,Justin Shaffer,G,Georgia
+2022,6,195,Los Angeles Chargers,Jamaree Salyer,G,Georgia
+2022,6,199,Carolina Panthers,Cade Mays,G,Tennessee
+2022,6,205,Houston Texans,Austin Deculus,T,LSU
+2022,6,207,Chicago Bears,Doug Kramer,C,Illinois
+2022,6,209,Buffalo Bills,Luke Tenuta,T,Virginia Tech
+2022,6,210,New England Patriots,Chasen Hines,G,LSU
+2022,6*,215,Arizona Cardinals,Lecitus Smith,G,Virginia Tech
+2022,7,226,Chicago Bears,Ja'Tyre Carter,T,Southern
+2022,7,230,Washington Commanders,Chris Paul,G,Tulsa
+2022,7,238,Las Vegas Raiders,Thayer Munford,T,Ohio State
+2022,7,245,New England Patriots,Andrew Stueber,G,Michigan
+2022,7,246,Cleveland Browns,Dawson Deaton,C,Texas Tech
+2022,7,249,Green Bay Packers,Rasheed Walker,T,Penn State
+2022,7*,257,Arizona Cardinals,Marquis Hayes,G,Oklahoma
+2022,7*,261,Los Angeles Rams,A. J. Arcuri,T,Michigan State
+2023,1,6,Arizona Cardinals,Paris Johnson Jr.,T,Ohio State
+2023,1,10,Chicago Bears,Darnell Wright,T,Tennessee
+2023,1,11,Tennessee Titans,Peter Skoronski,T,Northwestern
+2023,1,14,Pittsburgh Steelers,Broderick Jones,T,Georgia
+2023,1,27,Jacksonville Jaguars,Anton Harrison,T,Oklahoma
+2023,2,36,Los Angeles Rams,Steve Avila,G,TCU
+2023,2,38,Atlanta Falcons,Matthew Bergeron,G,Syracuse
+2023,2,43,New York Jets,Joe Tippmann,C,Wisconsin
+2023,2,48,Tampa Bay Buccaneers,Cody Mauch,G,North Dakota State
+2023,2,57,New York Giants,John Michael Schmitz,C,Minnesota
+2023,2,59,Buffalo Bills,O'Cyrus Torrence,G,Florida
+2023,2,62,Houston Texans,Juice Scruggs,C,Penn State
+2023,3,65,Philadelphia Eagles,Tyler Steen,T,Alabama
+2023,3,92,Kansas City Chiefs,Wanya Morris,T,Oklahoma
+2023,3*,97,Washington Commanders,Ricky Stromberg,C,Arkansas
+2023,4,103,New Orleans Saints,Nick Saldiveri,T,Old Dominion
+2023,4,106,Indianapolis Colts,Blake Freeland,T,BYU
+2023,4,107,New England Patriots,Jake Andrews,C,Troy
+2023,4,108,Seattle Seahawks,Anthony Bradford,G,LSU
+2023,4,111,Cleveland Browns,Dawand Jones,T,Ohio State
+2023,4,114,Carolina Panthers,Chandler Zavala,G,NC State
+2023,4,117,New England Patriots,Sidy Sow,G,Eastern Michigan
+2023,4,118,Washington Commanders,Braeden Daniels,T,Utah
+2023,4,120,New York Jets,Carter Warren,T,Pittsburgh
+2023,4,122,Arizona Cardinals,Jon Gaines II,G,UCLA
+2023,5,144,New England Patriots,Atonio Mafi,G,UCLA
+2023,5,152,Detroit Lions,Colby Sorsdal,T,William & Mary
+2023,5,154,Seattle Seahawks,Olu Oluwatimi,C,Michigan
+2023,5,156,Los Angeles Chargers,Jordan McFadden,G,Clemson
+2023,5*,169,Dallas Cowboys,Asim Richards,T,North Carolina
+2023,5*,174,Los Angeles Rams,Warren McClendon,T,Georgia
+2023,6,186,Tennessee Titans,Jaelyn Duncan,T,Maryland
+2023,6,190,Cleveland Browns,Luke Wypler,C,Ohio State
+2023,6,199,Baltimore Ravens,Malaesala Aumavae–Laulu,T,Oregon
+2023,6,201,Houston Texans,Jarrett Patterson,C,Notre Dame
+2023,7,225,Atlanta Falcons,Jovaughn Gwyn,G,South Carolina
+2023,7,226,Jacksonville Jaguars,Cooper Hodges,T,Appalachian State
+2023,7,229,Baltimore Ravens,Andrew Vorhees,G,USC
+2023,7,230,Buffalo Bills,Nick Broeker,G,Ole Miss
+2023,7,236,Indianapolis Colts,Jake Witt,T,Northern Michigan
+2023,7,238,Miami Dolphins,Ryan Hayes,T,Michigan
+2023,7*,251,Pittsburgh Steelers,Spencer Anderson,G,Maryland
+2023,7*,257,Denver Broncos,Alex Forsyth,C,Oregon
+2024,1,5,Los Angeles Chargers,Joe Alt†,T,Notre Dame
+2024,1,7,Tennessee Titans,JC Latham,T,Alabama
+2024,1,11,New York Jets,Olu Fashanu,T,Penn State
+2024,1,14,New Orleans Saints,Taliese Fuaga,T,Oregon State
+2024,1,18,Cincinnati Bengals,Amarius Mims,T,Georgia
+2024,1,20,Pittsburgh Steelers,Troy Fautanu,T,Washington
+2024,1,25,Green Bay Packers,Jordan Morgan,T,Arizona
+2024,1,26,Tampa Bay Buccaneers,Graham Barton,C,Duke
+2024,1,29,Dallas Cowboys,Tyler Guyton,T,Oklahoma
+2024,2,44,Las Vegas Raiders,Jackson Powers-Johnson,G,Oregon
+2024,2,51,Pittsburgh Steelers,Zach Frazier,C,West Virginia
+2024,2,55,Miami Dolphins,Patrick Paul,T,Houston
+2024,2,59,Houston Texans,Blake Fisher,T,Notre Dame
+2024,2,62,Baltimore Ravens,Roger Rosengarten,T,Washington
+2024,2,63,Kansas City Chiefs,Kingsley Suamataia,T,BYU
+2024,3,67,Washington Commanders,Brandon Coleman,T,TCU
+2024,3,68,New England Patriots,Caedan Wallace,T,Penn State
+2024,3,71,Arizona Cardinals,Isaiah Adams,G,Illinois
+2024,3,73,Dallas Cowboys,Cooper Beebe,G,Kansas State
+2024,3,75,Chicago Bears,Kiran Amegadjie,T,Yale
+2024,3,77,Las Vegas Raiders,DJ Glaze,T,Maryland
+2024,3,79,Indianapolis Colts,Matt Goncalves,T,Pittsburgh
+2024,3,81,Seattle Seahawks,Christian Haynes,G,UConn
+2024,3,85,Cleveland Browns,Zak Zinter,G,Michigan
+2024,3,86,San Francisco 49ers,Dominick Puni,G,Kansas
+2024,4,103,New England Patriots,Layden Robinson,G,Texas A&M
+2024,4,114,Jacksonville Jaguars,Javon Foster,T,Missouri
+2024,4,117,Indianapolis Colts,Tanor Bortolini,C,Wisconsin
+2024,4,119,Pittsburgh Steelers,Mason McCormick,G,South Dakota State
+2024,4,126,Detroit Lions,Giovanni Manu,T,British Columbia
+2024,5,141,Buffalo Bills,Sedrick Van Pran-Granger,C,Georgia
+2024,5,159,Kansas City Chiefs,Hunter Nourzad,C,Penn State
+2024,5,162,Arizona Cardinals,Christian Jones,T,Texas
+2024,5,163,Green Bay Packers,Jacob Monk,C,Duke
+2024,5*,172,Philadelphia Eagles,Trevor Keegan,G,Michigan
+2024,6,177,Minnesota Vikings,Walter Rouse,T,Oklahoma
+2024,6,179,Seattle Seahawks,Sataoa Laumea,G,Utah
+2024,6,190,Philadelphia Eagles,Dylan McMahon,C,NC State
+2024,6,202,Green Bay Packers,Travis Glover,T,Georgia State
+2024,6,204,Buffalo Bills,Tylan Grable,T,UCF
+2024,6,207,Seattle Seahawks,Michael Jerrell,T,Findlay
+2024,6*,210,Detroit Lions,Christian Mahogany,G,Boston College
+2024,6*,215,San Francisco 49ers,Jarrett Kingston,G,USC
+2024,6*,217,Los Angeles Rams,Beaux Limmer,C,Arkansas
+2024,6*,220,Tampa Bay Buccaneers,Elijah Klein,G,UTEP
+2024,7,221,Buffalo Bills,Travis Clayton,T,
+2024,7,228,Baltimore Ravens,Nick Samac,C,Michigan State
+2024,7,230,Minnesota Vikings,Michael Jurgens,C,Wake Forest
+2024,7,233,Dallas Cowboys,Nathan Thomas,T,Louisiana
+2024,7,237,Cincinnati Bengals,Matt Lee,C,Miami (FL)
+2024,7,239,New Orleans Saints,Josiah Ezirim,T,Eastern Kentucky
+2024,7,248,Kansas City Chiefs,C. J. Hanson,G,Holy Cross
+2024,7,249,Houston Texans,LaDarius Henderson,G,Michigan
+2024,7*,254,Los Angeles Rams,KT Leveston,G,Kansas State
+2024,7*,256,Denver Broncos,Nick Gargiulo,C,South Carolina
+2025,1,4,New England Patriots,Will Campbell,T,LSU
+2025,1,7,New York Jets,Armand Membou,T,Missouri
+2025,1,9,New Orleans Saints,Kelvin Banks Jr.,T,Texas
+2025,1,12,Dallas Cowboys,Tyler Booker,G,Alabama
+2025,1,18,Seattle Seahawks,Grey Zabel,G,North Dakota State
+2025,1,24,Minnesota Vikings,Donovan Jackson,G,Ohio State
+2025,1,29,Washington Commanders,Josh Conerly Jr.,T,Oregon
+2025,1,32,Kansas City Chiefs,Josh Simmons,T,Ohio State
+2025,2,37,Miami Dolphins,Jonah Savaiinaea,G,Arizona
+2025,2,48,Houston Texans,Aireontae Ersery,T,Minnesota
+2025,2,54,Green Bay Packers,Anthony Belton,T,NC State
+2025,2,56,Chicago Bears,Ozzy Trapilo,T,Boston College
+2025,2,57,Detroit Lions,Tate Ratledge,G,Georgia
+2025,3,81,Cincinnati Bengals,Dylan Fairchild,G,Georgia
+2025,3,89,Jacksonville Jaguars,Wyatt Milum,G,West Virginia
+2025,3,91,Baltimore Ravens,Emery Jones Jr.,T,LSU
+2025,3,95,New England Patriots,Jared Wilson,C,Georgia
+2025,3*,98,Las Vegas Raiders,Caleb Rogers,G,Texas Tech
+2025,3*,99,Las Vegas Raiders,Charles Grant,T,William & Mary
+2025,4,127,Indianapolis Colts,Jalen Travis,T,Iowa State
+2025,5,141,Baltimore Ravens,Carson Vinson,T,Alabama A&M
+2025,5,153,Cincinnati Bengals,Jalen Rivers,G,Miami (FL)
+2025,5,154,New York Giants,Marcus Mbow,G,Purdue
+2025,5,167,Tennessee Titans,Jackson Slater,G,Sacramento State
+2025,5,168,Philadelphia Eagles,Drew Kendall,C,Boston College
+2025,5*,171,Detroit Lions,Miles Frazier,G,LSU
+2025,6,191,Philadelphia Eagles,Myles Hinton,T,Michigan
+2025,6,192,Seattle Seahawks,Bryce Cabeldue,G,Kansas
+2025,6,195,Chicago Bears,Luke Newman,G,Michigan State
+2025,6,199,Los Angeles Chargers,Branson Taylor,T,Pittsburgh
+2025,6,204,Dallas Cowboys,Ajani Cornelius,T,Oregon
+2025,6,206,Buffalo Bills,Chase Lundt,T,UConn
+2025,6,207,Philadelphia Eagles,Cameron Williams,T,Texas
+2025,6*,211,Arizona Cardinals,Hayden Conner,G,Texas
+2025,7,218,Atlanta Falcons,Jack Nelson,T,Wisconsin
+2025,7,220,New England Patriots,Marcus Bryant,T,Missouri
+2025,7,221,Jacksonville Jaguars,Jonah Monheim,C,USC
+2025,7,234,Seattle Seahawks,Mason Richman,T,Iowa
+2025,7,243,Baltimore Ravens,Garrett Dellinger,G,LSU
+2025,7*,249,San Francisco 49ers,Connor Colby,G,Iowa
+2025,7*,250,Green Bay Packers,John Williams,G,Cincinnati

@@ -13,6 +13,7 @@ POSITIONS = {
     'rb': {'name': 'Running Back', 'recruit_match': ['RB']},
     'wr': {'name': 'Wide Receiver', 'recruit_match': ['WR']},
     'te': {'name': 'Tight End', 'recruit_match': ['TE']},
+    'ol': {'name': 'Offensive Line', 'recruit_match': ['OT', 'OG', 'OL', 'C', 'G', 'T', 'LT', 'RT', 'LG', 'RG']},
     'safety': {'name': 'Safety', 'recruit_match': ['S', 'FS', 'SS', 'Safety']},
     'cb': {'name': 'Cornerback', 'recruit_match': ['CB']},
     'lb': {'name': 'Linebacker', 'recruit_match': ['LB', 'OLB', 'ILB']},
@@ -87,8 +88,9 @@ def build_html():
         recruit_df['NAME'] = recruit_df['first'].astype(str).str.strip() + ' ' + recruit_df['last'].astype(str).str.strip()
         recruit_df['SCHOOL'] = recruit_df['effective_school_name']
         recruit_df['TEAM'] = "High School Recruit"
-        recruit_df['HT'] = recruit_df['height']
-        recruit_df['WT'] = recruit_df['weight']
+        recruit_df['HT']   = recruit_df['height']
+        recruit_df['WT']   = recruit_df['weight']
+        recruit_df['WING'] = recruit_df['wingspan']
         recruit_df['40'] = recruit_df['forty']
         recruit_df['100M'] = recruit_df['track100m']
         recruit_df['VERT'] = recruit_df['vertical']
@@ -161,12 +163,60 @@ def build_html():
     position_data = {}
     
     for pos_code, pos_info in POSITIONS.items():
+        # OL has no combine/stats CSV — load from UCReport picks file instead
+        if pos_code == 'ol':
+            ol_path = os.path.join(draft_data_path, 'ol_ucreport_data.csv')
+            if not os.path.exists(ol_path):
+                continue
+            ol_raw = pd.read_csv(ol_path)
+            if ol_raw.empty:
+                continue
+            ol_raw['first'] = ol_raw['first'].astype(str).str.strip()
+            ol_raw['last']  = ol_raw['last'].astype(str).str.strip()
+            ol_raw['NAME']  = ol_raw['first'] + ' ' + ol_raw['last']
+            ol_raw['YEAR']  = ol_raw['wiki_year']
+            ol_raw['ROUND'] = pd.to_numeric(ol_raw['wiki_round'], errors='coerce')
+            ol_raw['PICK #'] = pd.to_numeric(ol_raw['wiki_pick'], errors='coerce')
+            ol_raw['TEAM']  = ol_raw['wiki_team']
+            ol_raw['SCHOOL'] = ol_raw['effective_school_name'].fillna(ol_raw.get('wiki_college', ''))
+            ol_raw['HT']    = pd.to_numeric(ol_raw['height'],   errors='coerce')
+            ol_raw['WT']    = pd.to_numeric(ol_raw['weight'],   errors='coerce')
+            ol_raw['40']    = pd.to_numeric(ol_raw['forty'],    errors='coerce')
+            ol_raw['SHUT']  = pd.to_numeric(ol_raw['shuttle'],  errors='coerce')
+            ol_raw['VERT']  = pd.to_numeric(ol_raw['vertical'], errors='coerce')
+            ol_raw['BROAD'] = pd.to_numeric(ol_raw['broad'],    errors='coerce')
+            ol_raw['WING']  = pd.to_numeric(ol_raw['wingspan'], errors='coerce')
+            ol_raw['100M']  = pd.to_numeric(ol_raw['track100m'],errors='coerce')
+            ol_raw['SHOT']  = pd.to_numeric(ol_raw['trackSP'],  errors='coerce')
+            ol_raw['LJ']    = pd.to_numeric(ol_raw['trackLJ'],  errors='coerce')
+            ol_raw['HJ']    = pd.to_numeric(ol_raw['highJump'], errors='coerce')
+            ol_raw['is_recruit'] = False
+            df = ol_raw[ol_raw['NAME'].str.strip().str.len() > 0].copy()
+
+            if not all_recruits.empty:
+                match_positions = pos_info['recruit_match']
+                mask = (
+                    all_recruits['position_projected'].isin(match_positions) |
+                    all_recruits['position_played'].isin(match_positions)
+                )
+                pos_recruits = all_recruits[mask].copy()
+                if not pos_recruits.empty:
+                    df = pd.concat([df, pos_recruits], ignore_index=True)
+
+            records = df.to_dict(orient='records')
+            for row in records:
+                for k, v in row.items():
+                    if isinstance(v, float) and math.isnan(v):
+                        row[k] = None
+            position_data[pos_code] = {'name': pos_info['name'], 'players': records}
+            continue
+
         combine_path = os.path.join(draft_data_path, f'{pos_code}_combine.csv')
         stats_path = os.path.join(draft_data_path, f'{pos_code}_stats.csv')
-        
+
         combine_df = load_csv(combine_path)
         stats_df = load_csv(stats_path)
-        
+
         if combine_df.empty:
             continue
             
@@ -701,6 +751,7 @@ def build_html():
             te:     ['HT','WT','WING','HAND','40','SHUT','VERT','BROAD','100M','110HH','200M','300IH','400M','SHOT','DISCUS','HJ','LJ','TJ',
                      'GP','Rec_Rec','Rec_Yds','Rec_Avg','Rec_Y/G','Rec_Lng','Rec_TD',
                      'Rush_GP','Rush_Car','Rush_Yds','Rush_Avg','Rush_Y/G','Rush_Lng','100+','Rush_TD'],
+            ol:     ['HT','WT','WING','40','SHUT','VERT','BROAD','100M','SHOT','HJ','LJ'],
             safety: ['HT','WT','WING','HAND','40','SHUT','3 CONE','VERT','BROAD','100M','110HH','200M','300IH','400M','400R','SHOT','DISCUS','JAVELIN','HJ','LJ','TJ',
                      'GP','SOLO','ASST','TKLS','T/G','TFL','INT','PD'],
             cb:     ['HT','WT','WING','HAND','40','SHUT','3 CONE','VERT','BROAD','100M','110HH','200M','300IH','400M','400R','SHOT','DISCUS','JAVELIN','HJ','LJ','TJ',
@@ -903,21 +954,44 @@ def build_html():
 
                 const traces = [histTrace];
                 
+                // Compute bin counts for drafted players — needed to stack recruits on bars
+                const draftBinCounts = {{}};
+                if (binSpec) {{
+                    draftedX.forEach(v => {{
+                        const bin = Math.floor((v - binSpec.start) / binSpec.size);
+                        draftBinCounts[bin] = (draftBinCounts[bin] || 0) + 1;
+                    }});
+                }}
+                const yMaxCount = Math.max(...Object.values(draftBinCounts), 1);
+
                 if (recruits.length) {{
+                    // Assign each recruit a bin index and slot so they stack on top of their bar
+                    const rBuckets = {{}};
+                    recruits.forEach(p => {{
+                        const bin = binSpec
+                            ? Math.floor((p[xField] - binSpec.start) / binSpec.size)
+                            : Math.round(p[xField]);
+                        rBuckets[bin] = (rBuckets[bin] || 0) + 1;
+                        p._binIndex = bin;
+                        p._jitterSlot = rBuckets[bin] - 1;
+                    }});
                     traces.push({{
                         x: recruits.map(p => p[xField]),
-                        y: recruits.map(() => 0),
+                        y: recruits.map(p => 0.5 + p._jitterSlot * 0.8),
                         mode: 'markers',
                         type: 'scatter',
                         name: 'Recruits',
                         hoverinfo: 'none',
+                        selectedpoints: null,
+                        selected: {{ marker: {{ opacity: 1 }} }},
+                        unselected: {{ marker: {{ opacity: 1 }} }},
                         marker: {{ color: '#2ECC71', size: 12, symbol: 'diamond' }}
                     }});
                 }}
 
                 // Compute percentiles from drafted players only
                 const draftedVals = drafted.map(p => p[xField]).sort((a, b) => a - b);
-                
+
                 function quantile(arr, q) {{
                     if (!arr.length) return 0;
                     const pos = (arr.length - 1) * q;
@@ -925,17 +999,26 @@ def build_html():
                     const rest = pos - base;
                     return arr[base + 1] !== undefined ? arr[base] + rest * (arr[base + 1] - arr[base]) : arr[base];
                 }}
-                
+
                 const isSpeed = metricDefs[xField] && metricDefs[xField].unit === 's';
                 const p50  = quantile(draftedVals, 0.50);
                 const pBot = isSpeed ? quantile(draftedVals, 0.90) : quantile(draftedVals, 0.10);
                 const pTop = isSpeed ? quantile(draftedVals, 0.10) : quantile(draftedVals, 0.90);
                 const dec  = (metricDefs[xField] && metricDefs[xField].decimals !== undefined) ? metricDefs[xField].decimals : 1;
 
+                const yaxisCfg = {{ title: 'Frequency' }};
+                if (binSpec) {{
+                    const maxRecruitSlot = recruits.length ? Math.max(...recruits.map(p => p._jitterSlot)) : 0;
+                    const maxRecruitY = recruits.length ? 0.5 + maxRecruitSlot * 0.8 : 0;
+                    const yTop = Math.ceil(Math.max(yMaxCount, maxRecruitY)) + 1;
+                    const yTickVals = Array.from({{length: yTop + 1}}, (_, i) => i);
+                    Object.assign(yaxisCfg, {{ range: [0, yTop], tickmode: 'array', tickvals: yTickVals }});
+                }}
+
                 const layout = {{
                     title: `DISTRIBUTION OF ${{metricDefs[xField].label.toUpperCase()}}`,
                     xaxis: axisConfig(xField),
-                    yaxis: {{ title: 'Frequency' }},
+                    yaxis: yaxisCfg,
                     barmode: 'overlay',
                     dragmode: 'select',
                     margin: {{ t: 50 }},
@@ -1113,29 +1196,34 @@ def build_html():
                 }}];
 
                 if (recruits.length) {{
+                    // Reuse _binIndex/_jitterSlot from initial draw; stack on bars using current counts
                     traces.push({{
                         x: recruits.map(p => p[xField]),
-                        y: recruits.map(() => 0),
+                        y: recruits.map(p => 0.5 + (p._jitterSlot || 0) * 0.8),
                         mode: 'markers',
                         type: 'scatter',
                         name: 'Recruits',
                         hoverinfo: 'none',
+                        selectedpoints: null,
+                        selected: {{ marker: {{ opacity: 1 }} }},
+                        unselected: {{ marker: {{ opacity: 1 }} }},
                         marker: {{ color: '#2ECC71', size: 12, symbol: 'diamond' }}
                     }});
                 }}
 
+                const yMax2 = Math.max(...counts, 1);
+                const maxRecruitSlot2 = recruits.length ? Math.max(...recruits.map(p => p._jitterSlot || 0)) : 0;
+                const maxRecruitY2 = recruits.length ? 0.5 + maxRecruitSlot2 * 0.8 : 0;
+                const yTop2 = Math.ceil(Math.max(yMax2, maxRecruitY2)) + 1;
+                const yTickVals2 = Array.from({{length: yTop2 + 1}}, (_, i) => i);
                 const nextLayout = {{
                     ...plotDiv.layout,
                     xaxis: {{ ...plotDiv.layout.xaxis }},
-                    yaxis: {{ ...plotDiv.layout.yaxis }}
+                    yaxis: {{ ...plotDiv.layout.yaxis, range: [0, yTop2], tickmode: 'array', tickvals: yTickVals2, autorange: false }}
                 }};
                 if (plotDiv._fullLayout && plotDiv._fullLayout.xaxis && plotDiv._fullLayout.xaxis.range) {{
                     nextLayout.xaxis.range = [...plotDiv._fullLayout.xaxis.range];
                     nextLayout.xaxis.autorange = false;
-                }}
-                if (plotDiv._fullLayout && plotDiv._fullLayout.yaxis && plotDiv._fullLayout.yaxis.range) {{
-                    nextLayout.yaxis.range = [...plotDiv._fullLayout.yaxis.range];
-                    nextLayout.yaxis.autorange = false;
                 }}
 
                 Plotly.react('plot', traces, nextLayout, {{ displaylogo: false }});
