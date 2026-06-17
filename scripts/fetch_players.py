@@ -72,7 +72,12 @@ def fetch_player(first_name, last_name):
                 if part in api_first:
                     matched.append(p)
                     break
-                    
+
+        # The last-name API search is a substring match, so "james" also returns
+        # "Craig-James" etc. Prefer candidates whose last name matches exactly,
+        # falling back to the loose match order when none do.
+        query_last = normalize_name(last_name)
+        matched.sort(key=lambda p: normalize_name(p.get('last', '')) != query_last)
         return matched
     else:
         print(f"Error fetching {first_name} {last_name}: {response.status_code}")
