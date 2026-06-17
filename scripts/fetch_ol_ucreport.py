@@ -3,11 +3,14 @@ import time
 import os
 import pandas as pd
 
-from recruit_sources import normalize_name
+from ol_report_helpers import fetch_arm_length
+from recruit_sources import normalize_name, load_ucreport_credentials
 
 ROOT_DIR    = os.path.join(os.path.dirname(__file__), "..")
 INPUT_PATH  = os.path.join(ROOT_DIR, "data/draft/ol_wikipedia_picks.csv")
 OUTPUT_PATH = os.path.join(ROOT_DIR, "data/draft/ol_ucreport_data.csv")
+
+sessionid, csrftoken = load_ucreport_credentials()
 
 session = requests.Session()
 session.headers.update({
@@ -20,10 +23,10 @@ session.headers.update({
     "sec-fetch-mode": "cors",
     "sec-fetch-site": "same-origin",
     "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
-    "x-csrftoken": "TPwxt7v2mFUyUWWdL7WynvkChRYdgC2K1xwiLcKSnWxhK4gh3pilnXXFTSE4YRnL",
+    "x-csrftoken": csrftoken,
 })
 session.cookies.update({
-    "sessionid": "xqy7lkm7ztv1ar6b7nqifinoebhhu19t",
+    "sessionid": sessionid,
 })
 
 COL_NAMES = [
@@ -118,8 +121,9 @@ for _, row in picks.iterrows():
         best["wiki_team"]    = row["team"]
         best["wiki_pos"]     = row["pos"]
         best["wiki_college"] = row["college"]
+        best["arm_length"]   = fetch_arm_length(session, best.get("player_id"))
         all_results.append(best)
-        print(f"  -> Found (ID: {best.get('player_id')}, class {best.get('class_field')})")
+        print(f"  -> Found (ID: {best.get('player_id')}, class {best.get('class_field')}, arm {best.get('arm_length') or '-'})")
     else:
         print(f"  -> Not found.")
 

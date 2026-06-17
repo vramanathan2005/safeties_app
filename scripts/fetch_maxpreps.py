@@ -380,7 +380,7 @@ for index, row in df.iterrows():
             time.sleep(1)
             continue
             
-        match = re.search(r'<script id="__NEXT_DATA__" type="application/json">(.*?)</script>', r.text)
+        match = re.search(r'<script id="__NEXT_DATA__"[^>]*>(.*?)</script>', r.text)
         if not match:
             print(f"  -> Could not find __NEXT_DATA__ in search results.")
             time.sleep(1)
@@ -423,7 +423,7 @@ for index, row in df.iterrows():
             print(f"  -> Stats fetch failed with status {r_stats.status_code}")
             continue
             
-        match_stats = re.search(r'<script id="__NEXT_DATA__" type="application/json">(.*?)</script>', r_stats.text)
+        match_stats = re.search(r'<script id="__NEXT_DATA__"[^>]*>(.*?)</script>', r_stats.text)
         if not match_stats:
             print(f"  -> Could not find __NEXT_DATA__ in stats page.")
             continue

@@ -189,6 +189,7 @@ def build_html():
             ol_raw['VERT']  = pd.to_numeric(ol_raw['vertical'], errors='coerce')
             ol_raw['BROAD'] = pd.to_numeric(ol_raw['broad'],    errors='coerce')
             ol_raw['WING']  = pd.to_numeric(ol_raw['wingspan'], errors='coerce')
+            ol_raw['ARM']   = pd.to_numeric(ol_raw.get('arm_length'), errors='coerce')
             ol_raw['100M']  = pd.to_numeric(ol_raw['track100m'],errors='coerce')
             ol_raw['SHOT']  = pd.to_numeric(ol_raw['trackSP'],  errors='coerce')
             ol_raw['LJ']    = pd.to_numeric(ol_raw['trackLJ'],  errors='coerce')
@@ -685,6 +686,7 @@ def build_html():
             '400M':   {{ label: '400M',      unit: 's',   decimals: 2, dtick: 1,    binSize: 0.50 }},
             '400R':   {{ label: '400R',      unit: 's',   decimals: 2, dtick: 1,    binSize: 0.50 }},
             'WING':   {{ label: 'Wingspan',  unit: 'in',  decimals: 1, dtick: 1,    binSize: 1 }},
+            'ARM':    {{ label: 'Arm Length', unit: 'in', decimals: 2, dtick: 1,    binSize: 0.5 }},
             'HAND':   {{ label: 'Hand Size', unit: 'in',  decimals: 2, dtick: 0.5,  binSize: 0.25 }},
             'HJ':     {{ label: 'High Jump', unit: 'in',  decimals: 1, dtick: 2,    binSize: 1 }},
             'LJ':     {{ label: 'Long Jump', unit: 'in',  decimals: 1, dtick: 6,    binSize: 3 }},
@@ -754,7 +756,7 @@ def build_html():
             te:     ['HT','WT','WING','HAND','40','SHUT','VERT','BROAD','100M','110HH','200M','300IH','400M','SHOT','DISCUS','HJ','LJ','TJ',
                      'GP','Rec_Rec','Rec_Yds','Rec_Avg','Rec_Y/G','Rec_Lng','Rec_TD',
                      'Rush_GP','Rush_Car','Rush_Yds','Rush_Avg','Rush_Y/G','Rush_Lng','100+','Rush_TD'],
-            ol:     ['HT','WT','WING','40','SHUT','VERT','BROAD','100M','SHOT','HJ','LJ'],
+            ol:     ['HT','WT','WING','ARM','40','SHUT','VERT','BROAD','100M','SHOT','HJ','LJ'],
             safety: ['HT','WT','WING','HAND','40','SHUT','3 CONE','VERT','BROAD','100M','110HH','200M','300IH','400M','400R','SHOT','DISCUS','JAVELIN','HJ','LJ','TJ',
                      'GP','SOLO','ASST','TKLS','T/G','TFL','INT','PD'],
             cb:     ['HT','WT','WING','HAND','40','SHUT','3 CONE','VERT','BROAD','100M','110HH','200M','300IH','400M','400R','SHOT','DISCUS','JAVELIN','HJ','LJ','TJ',

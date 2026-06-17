@@ -7,8 +7,11 @@ from recruit_sources import (
     UCREPORT_PATH,
     attach_board_fields,
     load_recruit_board,
+    load_ucreport_credentials,
     normalize_name,
 )
+
+sessionid, csrftoken = load_ucreport_credentials()
 
 session = requests.Session()
 session.headers.update({
@@ -21,11 +24,11 @@ session.headers.update({
     "sec-fetch-mode": "cors",
     "sec-fetch-site": "same-origin",
     "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
-    "x-csrftoken": "TPwxt7v2mFUyUWWdL7WynvkChRYdgC2K1xwiLcKSnWxhK4gh3pilnXXFTSE4YRnL",
+    "x-csrftoken": csrftoken,
 })
 
 session.cookies.update({
-    "sessionid": "xqy7lkm7ztv1ar6b7nqifinoebhhu19t",
+    "sessionid": sessionid,
 })
 
 col_names = [

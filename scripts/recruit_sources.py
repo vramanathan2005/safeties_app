@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 import re
 
@@ -9,8 +10,14 @@ RECRUIT_DATA_DIR = DATA_DIR / "recruits"
 RECRUIT_BOARD_PATH = RECRUIT_DATA_DIR / "2027_recruits.csv"
 UCREPORT_PATH = RECRUIT_DATA_DIR / "ucreport_data.csv"
 MAXPREPS_PATH = RECRUIT_DATA_DIR / "maxpreps_data.csv"
+UCREPORT_COOKIE_PATH = ROOT_DIR / ".secrets" / "ucreport_cookie.json"
 
 SUFFIXES = {"jr", "jr.", "sr", "sr.", "ii", "iii", "iv", "v"}
+
+
+def load_ucreport_credentials():
+    data = json.loads(UCREPORT_COOKIE_PATH.read_text())
+    return data["sessionid"], data["x-csrftoken"]
 
 
 def normalize_name(value):

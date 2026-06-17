@@ -3,6 +3,7 @@ import pandas as pd
 import time
 import os
 
+from ol_report_helpers import fetch_arm_length
 from recruit_sources import normalize_name, extract_player_rows
 
 ROOT_DIR    = os.path.join(os.path.dirname(__file__), "..")
@@ -122,8 +123,9 @@ for row in missing_rows:
             best["wiki_team"]    = row["team"]
             best["wiki_pos"]     = row["pos"]
             best["wiki_college"] = row["college"]
+            best["arm_length"]   = fetch_arm_length(session, best.get("player_id"))
             newly_found.append(best)
-            print(f"  -> Found (ID: {best.get('player_id')}, class {best.get('class_field')})")
+            print(f"  -> Found (ID: {best.get('player_id')}, class {best.get('class_field')}, arm {best.get('arm_length') or '-'})")
         else:
             print(f"  -> Not found.")
 
