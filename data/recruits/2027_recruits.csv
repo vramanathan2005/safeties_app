@@ -2,7 +2,7 @@ board,position_group,category,name,school,city,state,height,weight,rank_type,ran
 2027 Offense,QB,QB,Kavian Bryant,Westwood High,Palestine,Texas,"6' 1.4""",185,PC Rank,2.5,137946723,84081373
 2027 Offense,QB,QB,Peyton Houston,Evangel Christian Academy,Shreveport,Louisiana,"5' 10.1""",200,PC Rank,2.5,100389928,58938760
 2027 Offense,QB,QB,Brady Edmunds,Huntington Beach High School,Cypress,California,"6' 5.5""",219,PC Rank,2.5,109514009,64208588
-2027 Offense,QB,QB,Ty Knutson,Smithson Valley High,Bulverde,Texas,"6' 3.2""",209,PC Rank,2.5,154413705,95136834
+2027 Offense,QB,QB,Ty Knutson,Smithson Valley High,Bulverde,Texas,"6' 3.4""",208,PC Rank,2.5,154413705,95136834
 2027 Offense,QB,QB,Keegan Croucher,Baylor School,Fonda,New York,"6' 4.4""",197,PC Rank,2.5,126644451,77273420
 2027 Offense,QB,QB,Gunner Rivers,St. Michael Catholic High School,Point Clear,Alabama,"6' 3.3""",208,PC Rank,2.5,112198109,66186414
 2027 Offense,QB,QB,Kael Snyder,Perry High School,Chandler,Arizona,"6' 2.2""",211,PC Rank,2.5,137944256,84078906
@@ -19,7 +19,7 @@ board,position_group,category,name,school,city,state,height,weight,rank_type,ran
 2027 Offense,QB,QB,Luke Babin,Woodville High,Woodville,Texas,"6' 2.5""",192,,,137945729,84080379
 2027 Offense,QB,QB,Trent Seaborn,Thompson High,Alablaster,Alabama,"6' 0.3""",191,PC Rank,2.5,88339060,52055080
 2027 Offense,QB,QB,Davin Davidson,Cardinal Mooney High,Sarasota,Florida,"6' 6.3""",212,PC Rank,3.0,137943719,84078369
-2027 Offense,RB,RB IS,Landen Williams-Callis,Dr. Thomas Randle High School,Richmond,Texas,"5' 7.5""",200,PC Rank,1.5,106038761,61969514
+2027 Offense,RB,RB IS,Landen Williams-Callis,Dr. Thomas Randle High School,Richmond,Texas,"5' 7.4""",202,PC Rank,1.5,106038761,61969514
 2027 Offense,RB,RB IS,SaRod Baker,Desoto High,Desoto,Texas,"5' 9.1""",193,PC Rank,2.0,127092721,77598543
 2027 Offense,RB,RB IS,Lathan Whisenton,Midway High,Hewitt,Texas,"5' 11.4""",197,PC Rank,2.0,126640186,77269155
 2027 Offense,RB,RB IS,CaDarius McMiller,John Tyler High,Tyler,Texas,"6' 1.4""",196,PC Rank,2.0,126638373,77267342
@@ -61,7 +61,7 @@ board,position_group,category,name,school,city,state,height,weight,rank_type,ran
 2027 Offense,OG,OG,Jackson Cook,Westlake High,Austin,Texas,"6' 3.1""",286,PC Rank,2.5,159493579,98299693
 2027 Offense,OG,OG,Keyon Hemphill-Woods,Columbus High,Columbus,Texas,"6' 3.3""",295,AC Rank,3.0,172384579,106373410
 2027 Offense,OG,OG,Peyton Miller,Anna High,Anna,Texas,"6' 4.5""",296,PC Rank,3.0,126095411,76896071
-2027 Offense,OG,OG,Lucas Rhoa,Orange Lutheran High School,Claremont,California,"6' 4.7""",305,PC Rank,2.5,126638644,77267613
+2027 Offense,OG,OG,Lucas Rhoa,Orange Lutheran High School,Claremont,California,"6' 5""",301,PC Rank,2.5,126638644,77267613
 2027 Offense,OG,OG,Reed Ramsier,The First Academy,Orlando,Florida,"6' 4.6""",291,PC Rank,2.5,129556378,79151548
 2027 Offense,OG,OG,Carter Jones,Poquoson High,,,"6' 5.4""",280,PC Rank,2.0,175649743,108737998
 2027 Offense,OG,OG,Lincoln Mageo,Oceanside High School,Oceanside,California,"6' 3.2""",292,PC Rank,2.5,126639176,77268145
@@ -104,8 +104,8 @@ board,position_group,category,name,school,city,state,height,weight,rank_type,ran
 2027 Offense,WR,WR (IS),Braylon Fisher,Columbus High,Columbus,Texas,"5' 10.2""",186,,,158689719,97897449
 2027 Offense,WR,WR (IS),Braylon Lane,C. E. King High School,Houston,Texas,"6' 2.1""",183,PC Rank,3.5,172075648,106142611
 2027 Offense,WR,WR (IS),Braylon Deal,Naaman Forest High,Rowllet,Texas,"6' 2.5""",178,PC Rank,3.0,150479164,92674922
-2027 Offense,WR,WR (OOS),Easton Royal,Brother Martin High,Slidell,Louisiana,"5' 10.7""",207,PC Rank,2.5,154627461,95244814
-2027 Offense,WR,WR (OOS),Monshun Sales,Lawrence North High,Indianapolis,Indiana,"6' 4.2""",201,PC Rank,3.0,129557503,79152673
+2027 Offense,WR,WR (OOS),Easton Royal,Brother Martin High,Slidell,Louisiana,"5' 11.2""",214,PC Rank,2.5,154627461,95244814
+2027 Offense,WR,WR (OOS),Monshun Sales,Lawrence North High,Indianapolis,Indiana,"6' 4.1""",199,PC Rank,3.0,129557503,79152673
 2027 Offense,WR,WR (OOS),Kesean Bowman,Brentwood Academy,Brentwood,Tennessee,"6' 0.8""",176,PC Rank,2.5,122347884,74253701
 2027 Offense,WR,WR (OOS),Jaden Upshaw,Lee County High,Albany,Georgia,"6' 1.5""",200,PC Rank,2.5,126639820,77268789
 2027 Offense,WR,WR (OOS),Quentin Hale,Centennial High School,Moreno Valley,California,"6' 1.6""",180,PC Rank,2.5,93183079,54742901
@@ -130,7 +130,7 @@ board,position_group,category,name,school,city,state,height,weight,rank_type,ran
 2027 Defense,DT,DT/NOSE (IS),Johnnie Fitzgerald,Red Oak High,Red Oak,Texas,"6' 1.2""",294,,,126640424,77269393
 2027 Defense,DT,DT/NOSE (OOS),Kasi Currie,Sierra Canyon School,Canyon Country,California,"6' 4.5""",315,PC Rank,2.5,126645476,77274445
 2027 Defense,DT,DT/NOSE (OOS),Jamarkus Pittman,Memphis Academy Of Science Engineering,Memphis,Tennessee,"6' 3.5""",320,PC Rank,2.5,170134383,104689431
-2027 Defense,DT,DT/NOSE (OOS),Tyler Alexander,Palm Beach Central High,Wellington,Florida,"6' 4.1""",311,PC Rank,3.0,174500103,107900986
+2027 Defense,DT,DT/NOSE (OOS),Tyler Alexander,Palm Beach Central High,Wellington,Florida,"6' 3.8""",309,PC Rank,3.0,174500103,107900986
 2027 Defense,DT,DT/NOSE (OOS),Jamar Thompson,West Boca Raton High,Boynton Beach,Florida,"6' 3.1""",303,PC Rank,2.5,126637112,77266081
 2027 Defense,DT,DT/NOSE (OOS),Nathanael Kamba,Corvian Community High School,,North Carolina,"6' 4""",300,PC Rank,3.0,129557617,79152787
 2027 Defense,DT,DT/NOSE (OOS),John Archer,Seventy-first High,Fayetteville,North Carolina,"6' 4""",315,PC Rank,3.0,172075615,106142599
@@ -144,7 +144,7 @@ board,position_group,category,name,school,city,state,height,weight,rank_type,ran
 2027 Defense,DT,DT/NOSE (OOS),Zarius Matavao,NFL Academy (London),,,"6' 6""",281,,,182611171,113275315
 2027 Defense,DE/DT,DE/DT (IS),Jalen Brewster,Cedar Hill High,Cedar Hill,Texas,"6' 2.6""",302,PC Rank,2.0,95337346,56251123
 2027 Defense,DE/DT,DE/DT (IS),DeMarco Jenkins,Pearland High,Pearland,Texas,"6' 2.3""",291,PC Rank,3.0,126643856,77272825
-2027 Defense,DE/DT,DE/DT (IS),Jason Johnson,Atascocita High,Humble,Texas,"6' 4""",290,PC Rank,3.0,149972743,92445626
+2027 Defense,DE/DT,DE/DT (IS),Jason Johnson,Atascocita High,Humble,Texas,"6' 3.4""",288,PC Rank,3.0,149972743,92445626
 2027 Defense,DE/DT,DE/DT (IS),Raiden Cook,Barbers Hill High,Baytown,Texas,"6' 4""",270,,,181971565,112947029
 2027 Defense,DE/DT,DE/DT (IS),Jaderian Jones,South Oak Cliff High,Wilmer,Texas,"6' 2.1""",291,PC Rank,3.0,131387179,80132729
 2027 Defense,DE/DT,DE/DT (IS),Trason Haley,Sachse High,Garland,Texas,"6' 2.6""",307,PC Rank,3.0,137944052,84078702
@@ -209,7 +209,7 @@ board,position_group,category,name,school,city,state,height,weight,rank_type,ran
 2027 Defense,LB,LB (IS),Jerrell Bridges,Midlothian High,Midlothian,Texas,"6' 1""",185,PC Rank,2.5,,
 2027 Defense,LB,LB (IS),Anthony James,La Marque High School,La Marque,Texas,"6' 2""",200,,,,
 2027 Defense,LB,LB (IS),Jhadyn Nelson,Langham Creek High,Houston,Texas,"6' 3""",211,PC Rank,2.5,181427484,112508334
-2027 Defense,LB,LB (IS),Cade Haug,Katy High,Katy,Texas,"6' 0.7""",221,PC Rank,2.5,126644359,77273328
+2027 Defense,LB,LB (IS),Cade Haug,Katy High,Katy,Texas,"6' 0.8""",217,PC Rank,2.5,126644359,77273328
 2027 Defense,LB,LB (IS),Cooper Witten,Liberty Christian,Westlake,Texas,"6' 0.7""",202,,,126638677,77267646
 2027 Defense,LB,LB (IS),Braylon Williams,Lamar High,Arlington,Texas,"6' 0.3""",227,PC Rank,2.5,126645519,77274488
 2027 Defense,LB,LB (IS),Davon Smith,Westfield High,Spring,Texas,"5' 10.5""",222,,,129556885,79152055
@@ -246,14 +246,14 @@ board,position_group,category,name,school,city,state,height,weight,rank_type,ran
 2027 Defense,LB,LB (OOS),Cole Crawford,Cartersville High School,Cartersville,Georgia,"6' 3""",197,,,126639587,77268556
 2027 Defense,LB,LB (OOS),Liufau Loumoli,IMG Academy,Kent,Washington,"6' 0.8""",209,,,126640867,77269836
 2027 Defense,CB,CB (IS),John Meredith III,North Crowley High,Burleson,Texas,"6' 2.1""",175,PC Rank,2.0,137945310,84079960
-2027 Defense,CB,CB (IS),Dhillon McGee,Red Oak High,Red Oak,Texas,"6' 0.2""",165,PC Rank,2.5,112121422,66128620
+2027 Defense,CB,CB (IS),Dhillon McGee,Red Oak High,Red Oak,Texas,"5' 11.9""",172,PC Rank,2.5,112121422,66128620
 2027 Defense,CB,CB (IS),Trenton Blaylock,Atascocita High,Humble,Texas,"6' 1""",172,,,127392480,77845560
 2027 Defense,CB,CB (IS),Kameron Roberson,Cypress Springs High,Cypress,Texas,"5' 11.6""",174,PC Rank,3.0,165397771,101736922
 2027 Defense,CB,CB (IS),Blake Jenkins,Obra D. Tompkins High,Katy,Texas,6',192,PC Rank,2.5,175193623,108407223
 2027 Defense,CB,CB (IS),Montre Jackson,Lakeview Centennial High,Seagoville,Texas,"6' 0.1""",178,PC Rank,2.5,122321465,74238341
 2027 Defense,CB,CB (IS),Joshua Banks,Atascocita High,Humble,Texas,"6' 1""",170,PC Rank,2.5,137945850,84080500
 2027 Defense,CB,CB (IS),Taelyn Mayo,Lewisville High,Lewisville,Texas,"6' 4.1""",174,PC Rank,2.0,100417956,58954415
-2027 Defense,CB,CB (IS),Brandon Sherrard,Shadow Creek High,Manvel,Texas,"6' 0.7""",176,,,149965934,92441563
+2027 Defense,CB,CB (IS),Brandon Sherrard,Shadow Creek High,Manvel,Texas,"6' 1.5""",177,,,149965934,92441563
 2027 Defense,CB,CB (IS),Hakim Frampton,Louis D. Brandeis High,San Antonio,Texas,"5' 11.3""",167,PC Rank,3.0,126642774,77271743
 2027 Defense,CB,CB (IS),Jerry Outhouse Jr.,North Crowley High,Ft Worth,Texas,6',185,PC Rank,2.5,137943443,84078093
 2027 Defense,CB,CB (IS),Mikhail McCreary,Claudia Taylor Johnson High,San Antonio,Texas,"5' 11.7""",173,PC Rank,3.0,101154874,59209261
@@ -283,7 +283,7 @@ board,position_group,category,name,school,city,state,height,weight,rank_type,ran
 2027 Defense,SAF,COMBO -> SAF,Ai'King Hall,Dothan High,Dothan,Alabama,"6' 1""",180,PC Rank,3.0,129555895,79151065
 2027 Defense,SAF,SAF (IS),Isaiah Udom,South Oak Cliff High,Mansfield,Texas,"6' 0.1""",191,,,133871436,81698744
 2027 Defense,SAF,SAF (IS),JayQuan Snell,Waxahachie High,Waxahachie,Texas,"6' 2""",185,PC Rank,3.0,122459205,74339812
-2027 Defense,SAF,SAF (IS),"Karnell ""Greedy"" James, Jr.",Manvel High,Sugar Land,Texas,6',176,PC Rank,3.0,126640791,77269760
+2027 Defense,SAF,SAF (IS),"Karnell ""Greedy"" James, Jr.",Manvel High,Sugar Land,Texas,"6' 0""",169,PC Rank,3.0,126640791,77269760
 2027 Defense,SAF,SAF (IS),Joshua Vilmael,William B. Travis High,Richmond,Texas,"6' 2.4""",185,PC Rank,3.0,162331896,100129332
 2027 Defense,SAF,SAF (IS),James Roberson,Allen High,Allen,Texas,"6' 0.5""",186,PC Rank,3.0,126641902,77270871
 2027 Defense,SAF,SAF (IS),Quincy Carter,Klein Oak High,Spring,Texas,"6' 4""",182,,,162319477,100122214
