@@ -94,6 +94,8 @@ def build_html():
         recruit_df['HT']   = recruit_df['height']
         recruit_df['WT']   = recruit_df['weight']
         recruit_df['WING'] = recruit_df['wingspan']
+        recruit_df['ARM'] = recruit_df['arm_length'] if 'arm_length' in recruit_df.columns else None
+        recruit_df['HAND'] = recruit_df['hand'] if 'hand' in recruit_df.columns else None
         recruit_df['40'] = recruit_df['forty']
         recruit_df['100M'] = recruit_df['track100m']
         recruit_df['VERT'] = recruit_df['vertical']
@@ -761,7 +763,7 @@ def build_html():
                      'GP','SOLO','ASST','TKLS','T/G','TFL','INT','PD'],
             cb:     ['HT','WT','WING','HAND','40','SHUT','3 CONE','VERT','BROAD','100M','110HH','200M','300IH','400M','400R','SHOT','DISCUS','JAVELIN','HJ','LJ','TJ',
                      'GP','SOLO','ASST','TKLS','T/G','TFL','INT','PD'],
-            lb:     ['HT','WT','WING','HAND','40','SHUT','3 CONE','VERT','BROAD','100M','110HH','200M','300IH','400M','400R','SHOT','DISCUS','JAVELIN','HJ','LJ','TJ',
+            lb:     ['HT','WT','WING','ARM','HAND','40','SHUT','3 CONE','VERT','BROAD','100M','110HH','200M','300IH','400M','400R','SHOT','DISCUS','JAVELIN','HJ','LJ','TJ',
                      'GP','SOLO','ASST','TKLS','T/G','TFL','GP_2','SACKS','YDL','S/G','HURS'],
             de:     ['HT','WT','WING','HAND','40','SHUT','3 CONE','VERT','BROAD','100M','110HH','200M','300IH','400M','400R','SHOT','DISCUS','JAVELIN','HJ','LJ','TJ',
                      'GP','SOLO','ASST','TKLS','T/G','TFL','GP_2','SACKS','YDL','S/G','HURS'],
