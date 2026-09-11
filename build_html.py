@@ -491,7 +491,7 @@ def build_html():
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Texas Football | Scouting</title>
+    <title>Texas Football</title>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
@@ -758,7 +758,7 @@ def build_html():
     </div>
 
     <div class="navbar">
-        <div class="brand"><img class="brand-logo" src="assets/longhorn-logo.png" alt="Longhorn mascot"><h1>Scouting</h1></div>
+        <div class="brand"><img class="brand-logo" src="assets/longhorn-logo.png" alt="Texas Football"></div>
         <div class="pos-selector-nav">
             <label for="position-select">POSITION GROUP</label>
             <select id="position-select"></select>
