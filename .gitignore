@@ -2,3 +2,7 @@ __pycache__/
 .venv/
 .DS_Store
 tests/artifacts/
+.secrets/
+data/arms/
+data/recruits/ucreport_all_prospects.csv
+data/recruits/combined_data.csv

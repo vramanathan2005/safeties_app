@@ -1,0 +1,207 @@
+{
+	"info": {
+		"name": "War Server API — All Routes",
+		"_postman_id": "war-server-all-routes-0001",
+		"description": "# War Server API — Complete Collection\n\nCovers **every** route registered in the project (`war_server/urls.py` → `api/urls.py`). `track/urls.py` is empty and not wired in, so the API app's six endpoints are the entire surface.\n\n## How every request works (from `api/views.py`)\n\nAll endpoints are wrapped by the `validate_and_track` decorator, which:\n\n1. Parses the **request body as JSON** (`json.loads(request.body)`) — so the method must be **POST** with a JSON body.\n2. Records a tracking row using the `key` **header** and the client IP.\n3. Returns **403** if the `key` header is not in the server's `valid_keys` list.\n4. Returns **400** if the body has no `\"college\"` field.\n\nThere is no trailing slash on any route (e.g. `/api/get_masterlist`, NOT `/api/get_masterlist/`). A trailing slash returns **404**.\n\n## Variables (edit under the collection's Variables tab)\n\n- `base_url` — defaults to the deployed App Engine URL so the collection works immediately. Switch to `{{local_url}}` to hit a local dev server.\n- `prod_url` — the App Engine deployment.\n- `local_url` — `http://127.0.0.1:8000` (only works when a local server with a reachable DB is running).\n- `api_key` — value sent in the `key` header (must match `valid_keys` in `api/views.py`).\n- `college` — institution name used for package-based filtering (e.g. `Florida Atlantic`).\n\n## Shared pagination / filtering params (all data endpoints)\n\n- `page` (int, default 0)\n- `limit` (int, default 1000; only applied when `0 < limit < 1000`)\n- `filter` (object) — Django field lookups, e.g. `{\"first__icontains\": \"john\", \"height__gte\": 72}`\n- `cols` (array) — restrict returned columns, e.g. `[\"first\", \"last\"]`\n\nSupported lookups: exact, iexact, contains, icontains, in, gt/gte, lt/lte, startswith/istartswith, endswith/iendswith, range, isnull, regex/iregex.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Endpoints",
+			"item": [
+				{
+					"name": "get_masterlist",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "key", "value": "{{api_key}}" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"college\": \"{{college}}\",\n    \"page\": 0,\n    \"limit\": 10,\n    \"filter\": {\n        \"first__icontains\": \"john\"\n    },\n    \"cols\": [\n        \"first\",\n        \"last\"\n    ]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/get_masterlist",
+							"host": [ "{{base_url}}" ],
+							"path": [ "api", "get_masterlist" ]
+						},
+						"description": "MasterList for the college's package. Filters by the package's allowed states, and (unless the package can see portal/archive) restricts to non-restricted class years."
+					}
+				},
+				{
+					"name": "get_measurable",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "key", "value": "{{api_key}}" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"college\": \"{{college}}\",\n    \"page\": 0,\n    \"limit\": 10\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/get_measurable",
+							"host": [ "{{base_url}}" ],
+							"path": [ "api", "get_measurable" ]
+						},
+						"description": "All Measurable rows (not package-filtered, but still requires a valid key and a `college` field)."
+					}
+				},
+				{
+					"name": "get_measurablecamp",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "key", "value": "{{api_key}}" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"college\": \"{{college}}\",\n    \"page\": 0,\n    \"limit\": 10\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/get_measurablecamp",
+							"host": [ "{{base_url}}" ],
+							"path": [ "api", "get_measurablecamp" ]
+						},
+						"description": "MeasurableCamp rows, filtered by the college's package (allowed states + class-year restriction via the related player)."
+					}
+				},
+				{
+					"name": "get_measurabletrack",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "key", "value": "{{api_key}}" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"college\": \"{{college}}\",\n    \"page\": 0,\n    \"limit\": 10,\n    \"filter\": {\n        \"event_type__isnull\": false\n    }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/get_measurabletrack",
+							"host": [ "{{base_url}}" ],
+							"path": [ "api", "get_measurabletrack" ]
+						},
+						"description": "MeasurableTrack rows, filtered by the college's package (same package rules as camp)."
+					}
+				},
+				{
+					"name": "get_measurablespeed",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "key", "value": "{{api_key}}" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"college\": \"{{college}}\",\n    \"page\": 0,\n    \"limit\": 10\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/get_measurablespeed",
+							"host": [ "{{base_url}}" ],
+							"path": [ "api", "get_measurablespeed" ]
+						},
+						"description": "MeasurableSpeed rows. Package-filtered, AND requires the package's `can_see_max_speed` permission — otherwise the server raises 'College Cannot See Speed Camps' (HTTP 500)."
+					}
+				},
+				{
+					"name": "get_collegeoffers",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "key", "value": "{{api_key}}" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"college\": \"{{college}}\",\n    \"page\": 0,\n    \"limit\": 10\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/get_collegeoffers",
+							"host": [ "{{base_url}}" ],
+							"path": [ "api", "get_collegeoffers" ]
+						},
+						"description": "CollegeOffers rows, filtered by the college's package (allowed states + class-year restriction via the related player)."
+					}
+				}
+			]
+		},
+		{
+			"name": "Error cases",
+			"item": [
+				{
+					"name": "403 — invalid / missing key",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "key", "value": "not-a-valid-key" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"college\": \"{{college}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/get_masterlist",
+							"host": [ "{{base_url}}" ],
+							"path": [ "api", "get_masterlist" ]
+						},
+						"description": "Sends a `key` header that is not in `valid_keys` → expect 403 `{\"error\": \"access denied\"}`."
+					}
+				},
+				{
+					"name": "400 — missing college",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "key", "value": "{{api_key}}" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"page\": 0\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/get_masterlist",
+							"host": [ "{{base_url}}" ],
+							"path": [ "api", "get_masterlist" ]
+						},
+						"description": "Valid key but no `college` field → expect 400 `{\"error\": \"No College\"}`."
+					}
+				},
+				{
+					"name": "404 — trailing slash",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "key", "value": "{{api_key}}" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"college\": \"{{college}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/get_masterlist/",
+							"host": [ "{{base_url}}" ],
+							"path": [ "api", "get_masterlist", "" ]
+						},
+						"description": "Same call but with a trailing slash → expect 404. Routes are registered without a trailing slash."
+					}
+				}
+			]
+		}
+	],
+	"variable": [
+		{ "key": "base_url", "value": "https://football-api-dot-football-344319.uc.r.appspot.com", "type": "string" },
+		{ "key": "prod_url", "value": "https://football-api-dot-football-344319.uc.r.appspot.com", "type": "string" },
+		{ "key": "local_url", "value": "http://127.0.0.1:8000", "type": "string" },
+		{ "key": "api_key", "value": "YOUR_API_KEY", "type": "string" },
+		{ "key": "college", "value": "Florida Atlantic", "type": "string" }
+	]
+}

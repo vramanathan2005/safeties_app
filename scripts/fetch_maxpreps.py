@@ -1,3 +1,6 @@
+import argparse
+from pathlib import Path
+
 import pandas as pd
 import requests
 import json
@@ -6,16 +9,18 @@ import time
 
 from recruit_sources import (
     MAXPREPS_PATH,
-    UCREPORT_PATH,
+    RECRUIT_DATA_DIR,
     load_recruit_board,
     normalize_name,
 )
 
-if not UCREPORT_PATH.exists():
-    print(f"Error: {UCREPORT_PATH} not found.")
-    exit(1)
-
-df = pd.read_csv(UCREPORT_PATH)
+parser = argparse.ArgumentParser(description="Fetch MaxPreps stats for a player CSV.")
+parser.add_argument("--players-csv", type=Path, default=RECRUIT_DATA_DIR / 'ucreport_data.csv',
+                    help="Player CSV with player_id, first, last, and school fields")
+args = parser.parse_args()
+if not args.players_csv.is_file():
+    parser.error(f"Player CSV not found: {args.players_csv}")
+df = pd.read_csv(args.players_csv)
 recruit_board = load_recruit_board()
 board_by_name = {
     normalize_name(row["query_name"]): row

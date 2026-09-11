@@ -1,12 +1,34 @@
 import pandas as pd
+import glob
 import json
 import os
+import re
 import math
+from scripts.player_outcomes import classify
+from scripts.reconcile_players import reconcile
+from scripts.recruit_sources import normalize_name
 
 ROOT_DIR = os.path.dirname(__file__)
 DATA_DIR = os.path.join(ROOT_DIR, 'data')
 DRAFT_DATA_DIR = os.path.join(DATA_DIR, 'draft')
 RECRUIT_DATA_DIR = os.path.join(DATA_DIR, 'recruits')
+
+DEFAULT_CLASS_YEARS = {2027, 2028}
+
+
+def load_board_names_by_year():
+    """Find every data/recruits/<year>_recruits.csv board export and return
+    {year: {normalized_name, ...}} so recruits can be flagged on_board."""
+    board_names_by_year = {}
+    pattern = re.compile(r'^(\d{4})_recruits\.csv$')
+    for filename in sorted(os.listdir(RECRUIT_DATA_DIR)):
+        match = pattern.match(filename)
+        if not match:
+            continue
+        year = int(match.group(1))
+        board_df = pd.read_csv(os.path.join(RECRUIT_DATA_DIR, filename))
+        board_names_by_year[year] = {normalize_name(n) for n in board_df['name'].dropna()}
+    return board_names_by_year
 
 POSITIONS = {
     'qb': {'name': 'Quarterback', 'recruit_match': ['QB']},
@@ -20,6 +42,41 @@ POSITIONS = {
     'de': {'name': 'Defensive End', 'recruit_match': ['DE']},
     'dt': {'name': 'Defensive Tackle', 'recruit_match': ['DT']}
 }
+
+def load_wiki_ucreport_picks(path):
+    """Standardize a fetch_wikipedia_ucreport_matches.py (or the older OL-only
+    ucreport_pipeline.py --kind ol) output file into the same column shape as the
+    combine/stats-derived draft rows: NAME, YEAR, ROUND, PICK #, TEAM, SCHOOL, HT,
+    WT, 40, etc. Those files carry wiki_year/wiki_round/wiki_pick/wiki_team/wiki_college
+    plus the raw UCReport measurable fields for each matched player."""
+    if not os.path.exists(path):
+        return pd.DataFrame()
+    raw = pd.read_csv(path)
+    if raw.empty:
+        return pd.DataFrame()
+    raw['first'] = raw['first'].astype(str).str.strip()
+    raw['last'] = raw['last'].astype(str).str.strip()
+    raw['NAME'] = raw['first'] + ' ' + raw['last']
+    raw['YEAR'] = raw['wiki_year']
+    raw['ROUND'] = pd.to_numeric(raw['wiki_round'], errors='coerce')
+    raw['PICK #'] = pd.to_numeric(raw['wiki_pick'], errors='coerce')
+    raw['TEAM'] = raw['wiki_team']
+    raw['SCHOOL'] = raw['effective_school_name'].fillna(raw.get('wiki_college', ''))
+    raw['HT'] = pd.to_numeric(raw['height'], errors='coerce')
+    raw['WT'] = pd.to_numeric(raw['weight'], errors='coerce')
+    raw['40'] = pd.to_numeric(raw['forty'], errors='coerce')
+    raw['SHUT'] = pd.to_numeric(raw['shuttle'], errors='coerce')
+    raw['VERT'] = pd.to_numeric(raw['vertical'], errors='coerce')
+    raw['BROAD'] = pd.to_numeric(raw['broad'], errors='coerce')
+    raw['WING'] = pd.to_numeric(raw['wingspan'], errors='coerce')
+    raw['ARM'] = pd.to_numeric(raw.get('arm_length'), errors='coerce')
+    raw['100M'] = pd.to_numeric(raw['track100m'], errors='coerce')
+    raw['SHOT'] = pd.to_numeric(raw['trackSP'], errors='coerce')
+    raw['LJ'] = pd.to_numeric(raw['trackLJ'], errors='coerce')
+    raw['HJ'] = pd.to_numeric(raw['highJump'], errors='coerce')
+    raw['is_recruit'] = False
+    return raw[raw['NAME'].str.strip().str.len() > 0].copy()
+
 
 def load_csv(path):
     if not os.path.exists(path):
@@ -66,14 +123,16 @@ def build_html():
     base_path = ROOT_DIR
     draft_data_path = DRAFT_DATA_DIR
     recruit_data_path = RECRUIT_DATA_DIR
-    ucreport_path = os.path.join(recruit_data_path, 'ucreport_data.csv')
+    ucreport_path = os.path.join(recruit_data_path, 'ucreport_all_prospects.csv')
+    if not os.path.exists(ucreport_path):
+        ucreport_path = os.path.join(recruit_data_path, 'ucreport_data.csv')
     maxpreps_path = os.path.join(recruit_data_path, 'maxpreps_data.csv')
     
     # Load recruit data once
     all_recruits = pd.DataFrame()
-    if os.path.exists(ucreport_path) and os.path.exists(maxpreps_path):
-        uc_df = pd.read_csv(ucreport_path)
-        mp_df = pd.read_csv(maxpreps_path)
+    if os.path.exists(ucreport_path):
+        uc_df = pd.read_csv(ucreport_path, low_memory=False)
+        mp_df = pd.read_csv(maxpreps_path) if os.path.exists(maxpreps_path) else pd.DataFrame(columns=['player_id'])
 
         # Drop columns already present in ucreport to avoid _x/_y duplicates
         mp_dup = [c for c in ('query_name', 'source_recruit_id', 'board_position_group', 'board_category') if c in mp_df.columns]
@@ -168,36 +227,17 @@ def build_html():
     position_data = {}
     
     for pos_code, pos_info in POSITIONS.items():
-        # OL has no combine/stats CSV — load from UCReport picks file instead
+        # OL has no combine/stats CSV — load from UCReport picks files instead
+        # (the older hand-built ol_ucreport_data.csv, plus any {pos}_{year}_ucreport.csv
+        # produced by fetch_wikipedia_ucreport_matches.py for newer draft classes).
         if pos_code == 'ol':
-            ol_path = os.path.join(draft_data_path, 'ol_ucreport_data.csv')
-            if not os.path.exists(ol_path):
+            wiki_parts = [load_wiki_ucreport_picks(os.path.join(draft_data_path, 'ol_ucreport_data.csv'))]
+            for extra_path in sorted(glob.glob(os.path.join(draft_data_path, 'ol_*_ucreport.csv'))):
+                wiki_parts.append(load_wiki_ucreport_picks(extra_path))
+            wiki_parts = [part for part in wiki_parts if not part.empty]
+            if not wiki_parts:
                 continue
-            ol_raw = pd.read_csv(ol_path)
-            if ol_raw.empty:
-                continue
-            ol_raw['first'] = ol_raw['first'].astype(str).str.strip()
-            ol_raw['last']  = ol_raw['last'].astype(str).str.strip()
-            ol_raw['NAME']  = ol_raw['first'] + ' ' + ol_raw['last']
-            ol_raw['YEAR']  = ol_raw['wiki_year']
-            ol_raw['ROUND'] = pd.to_numeric(ol_raw['wiki_round'], errors='coerce')
-            ol_raw['PICK #'] = pd.to_numeric(ol_raw['wiki_pick'], errors='coerce')
-            ol_raw['TEAM']  = ol_raw['wiki_team']
-            ol_raw['SCHOOL'] = ol_raw['effective_school_name'].fillna(ol_raw.get('wiki_college', ''))
-            ol_raw['HT']    = pd.to_numeric(ol_raw['height'],   errors='coerce')
-            ol_raw['WT']    = pd.to_numeric(ol_raw['weight'],   errors='coerce')
-            ol_raw['40']    = pd.to_numeric(ol_raw['forty'],    errors='coerce')
-            ol_raw['SHUT']  = pd.to_numeric(ol_raw['shuttle'],  errors='coerce')
-            ol_raw['VERT']  = pd.to_numeric(ol_raw['vertical'], errors='coerce')
-            ol_raw['BROAD'] = pd.to_numeric(ol_raw['broad'],    errors='coerce')
-            ol_raw['WING']  = pd.to_numeric(ol_raw['wingspan'], errors='coerce')
-            ol_raw['ARM']   = pd.to_numeric(ol_raw.get('arm_length'), errors='coerce')
-            ol_raw['100M']  = pd.to_numeric(ol_raw['track100m'],errors='coerce')
-            ol_raw['SHOT']  = pd.to_numeric(ol_raw['trackSP'],  errors='coerce')
-            ol_raw['LJ']    = pd.to_numeric(ol_raw['trackLJ'],  errors='coerce')
-            ol_raw['HJ']    = pd.to_numeric(ol_raw['highJump'], errors='coerce')
-            ol_raw['is_recruit'] = False
-            df = ol_raw[ol_raw['NAME'].str.strip().str.len() > 0].copy()
+            df = pd.concat(wiki_parts, ignore_index=True).drop_duplicates(subset=['NAME', 'YEAR'])
 
             if not all_recruits.empty:
                 match_positions = pos_info['recruit_match']
@@ -237,7 +277,7 @@ def build_html():
         # in a group carry the correct year before we filter to 2022-2025.
         combine_df['YEAR'] = combine_df['YEAR'].replace('', pd.NA).ffill()
         combine_df['YEAR_NUM'] = pd.to_numeric(combine_df['YEAR'], errors='coerce')
-        combine_df = combine_df[(combine_df['YEAR_NUM'] >= 2022) & (combine_df['YEAR_NUM'] <= 2025)]
+        combine_df = combine_df[(combine_df['YEAR_NUM'] >= 2022) & (combine_df['YEAR_NUM'] <= 2026)]
         combine_df = combine_df.drop(columns=['YEAR_NUM'])
         
         if not stats_df.empty:
@@ -249,7 +289,7 @@ def build_html():
             
             stats_df['YEAR'] = stats_df['YEAR'].replace('', pd.NA).ffill()
             stats_df['YEAR_NUM'] = pd.to_numeric(stats_df['YEAR'], errors='coerce')
-            stats_df = stats_df[(stats_df['YEAR_NUM'] >= 2022) & (stats_df['YEAR_NUM'] <= 2025)]
+            stats_df = stats_df[(stats_df['YEAR_NUM'] >= 2022) & (stats_df['YEAR_NUM'] <= 2026)]
             stats_df = stats_df.drop(columns=['YEAR_NUM'])
             
             # Specific renaming for position groups
@@ -310,9 +350,18 @@ def build_html():
                 df = df.drop(columns=['SCHOOL_x', 'SCHOOL_y'])
         else:
             df = combine_df
-            
+
         df['is_recruit'] = False
-        
+
+        # Bring in any newer draft classes pulled via Wikipedia + UCReport
+        # (fetch_wikipedia_draft.py + fetch_wikipedia_ucreport_matches.py) — these
+        # cover years past what the combine/stats CSVs above have on file.
+        for wiki_path in sorted(glob.glob(os.path.join(draft_data_path, f'{pos_code}_*_ucreport.csv'))):
+            wiki_df = load_wiki_ucreport_picks(wiki_path)
+            if not wiki_df.empty:
+                df = pd.concat([df, wiki_df], ignore_index=True)
+        df = df.drop_duplicates(subset=['NAME', 'YEAR'])
+
         if not all_recruits.empty:
             match_positions = pos_info['recruit_match']
             mask = (
@@ -341,14 +390,108 @@ def build_html():
             'players': records
         }
 
-    json_data = json.dumps(position_data)
+    # Keep recruit-only groups available even when their draft export is absent.
+    if not all_recruits.empty:
+        for code, info in POSITIONS.items():
+            if code in position_data:
+                continue
+            matches = info['recruit_match']
+            mask = (all_recruits['position_projected'].isin(matches) |
+                    all_recruits['position_played'].isin(matches))
+            recruits = all_recruits[mask]
+            if not recruits.empty:
+                records = json.loads(recruits.to_json(orient='records'))
+                position_data[code] = {'name': info['name'], 'players': records}
+
+    linked_count = reconcile(position_data)
+    print(f'Reconciled {linked_count} draft players with UCReport measurements')
+
+    outcomes_path = os.path.join(DATA_DIR, 'player_outcomes.csv')
+    outcomes = {}
+    if os.path.exists(outcomes_path):
+        source = pd.read_csv(outcomes_path).where(lambda frame: frame.notna(), None)
+        if source['player_id'].duplicated().any():
+            raise ValueError('player_outcomes.csv must have one selected season per player_id')
+        outcomes = {str(int(row['player_id'])): row for row in source.to_dict('records')}
+    for group in position_data.values():
+        for player in group['players']:
+            player['career_outcome'] = classify({'class_field': player.get('class_field')})
+            if player['career_outcome'] != 'HS Recruit' and not player.get('is_recruit') and player.get('ROUND'):
+                player['career_outcome'] = 'NFL drafted'
+            pid = player.get('player_id')
+            if pid is not None and str(int(pid)) in outcomes:
+                player['career_outcome'] = classify({**outcomes[str(int(pid))], 'class_field': player.get('class_field')})
+
+    # Flag recruits who are actually on one of our recruiting boards (data/recruits/<year>_recruits.csv,
+    # e.g. 2027_recruits.csv) vs. the much larger pool of every UCReport prospect in that class.
+    # Matched by normalized full name within the board's own class year — board exports don't carry
+    # a player_id we can join on. Drafted players are untouched; board status only applies to recruits.
+    board_names_by_year = load_board_names_by_year()
+    for group in position_data.values():
+        for player in group['players']:
+            if not player.get('is_recruit'):
+                continue
+            year = player.get('class_field')
+            names = board_names_by_year.get(int(year)) if year is not None else None
+            player['on_board'] = bool(names) and normalize_name(player.get('NAME')) in names
+
+    # Keep the full source in CSV; ship only fields used by the dashboard.
+    display_fields = {'NAME', 'SCHOOL', 'TEAM', 'YEAR', 'ROUND', 'PICK #', 'is_recruit', 'on_board',
+                      'player_id', 'class_field', 'career_outcome', 'HT', 'WT', '40',
+                      'VERT', 'BROAD', 'WING', 'ARM', 'HAND', 'SHUT', '100M', 'SHOT',
+                      'LJ', 'HJ', 'GP', 'C', 'Att', 'Yds', 'C%', 'Avg', 'Y/G', 'C/G',
+                      'TD', 'TD/G', 'Int', 'Lng', 'QBR', 'Car', '100+', 'Rush_GP',
+                      'Rush_Car', 'Rush_Yds', 'Rush_Avg', 'Rush_Y/G', 'Rush_Lng',
+                      'Rush_100+', 'Rush_TD', 'Rec', 'Rec_GP', 'Rec_Rec', 'Rec_Yds',
+                      'Rec_Avg', 'Rec_Y/G', 'Rec_Lng', 'Rec_TD', 'Solo', 'Ast', 'Tot',
+                      'T/G', 'TFL', 'Sacks', 'Sack_Yds', 'S/G', 'HURS', 'YDL',
+                      'SOLO', 'ASST', 'TKLS', 'INT', 'PD', 'GP_2', 'SACKS',
+                      '3 CONE', '110HH', '200M', '300IH', '400M', '400R',
+                      'DISCUS', 'JAVELIN', 'TJ'}
+    for group in position_data.values():
+        group['players'] = [{k: v for k, v in p.items() if k in display_fields} for p in group['players']]
+
+    # Reconciliation above needed the full UCReport history (older recruits link
+    # drafted players back to their HS measurables), so position_data still holds
+    # every class year at this point. Now split it: the page ships only drafted
+    # players + the two current recruiting classes inline (small, fast default
+    # load); every older/younger recruit class goes into a separate JSON file
+    # fetched lazily, only if the user expands the HS Graduation Year filter
+    # beyond the default two years.
+    extra_data = {}
+    for code, group in position_data.items():
+        default_players, extra_players = [], []
+        for p in group['players']:
+            if not p.get('is_recruit') or p.get('class_field') in DEFAULT_CLASS_YEARS:
+                default_players.append(p)
+            else:
+                extra_players.append(p)
+        group['players'] = default_players
+        if extra_players:
+            extra_data[code] = {'name': group['name'], 'players': extra_players}
+
+    with open(os.path.join(base_path, 'extra_recruits.json'), 'w') as f:
+        json.dump(extra_data, f, separators=(',', ':'))
+
+    if not all_recruits.empty:
+        # Don't re-embed every recruit a second time here — the per-position
+        # groups above already contain them. The 'all' view is assembled
+        # client-side from those groups (see the posData['all'] build in the
+        # page script) so the payload isn't duplicated.
+        position_data['all'] = {'name': 'All prospects'}
+
+    json_data = json.dumps(position_data, separators=(',', ':')).replace('<', r'\u003c')
     
+    default_years_js = ','.join(str(y) for y in sorted(DEFAULT_CLASS_YEARS))
+    board_years_js = ','.join(str(y) for y in sorted(board_names_by_year))
+
+    theme_css = open(os.path.join(ROOT_DIR, 'assets', 'dashboard.css')).read()
     html_template = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NFL Draft Scouting Dashboard</title>
+    <title>Texas Football | Scouting</title>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
@@ -600,6 +743,7 @@ def build_html():
         .hover-tooltip .ht-stat {{ display: flex; justify-content: space-between; align-items: center; gap: 20px; }}
         .hover-tooltip .ht-stat-label {{ font-size: 11px; font-weight: 700; color: var(--text-light); text-transform: uppercase; }}
         .hover-tooltip .ht-stat-val {{ font-size: 20px; font-weight: 800; color: var(--primary); }}
+        {theme_css}
     </style>
 </head>
 <body>
@@ -614,37 +758,50 @@ def build_html():
     </div>
 
     <div class="navbar">
-        <h1>Scouting Dashboard</h1>
+        <div class="brand"><img class="brand-logo" src="assets/longhorn-logo.png" alt="Longhorn mascot"><h1>Scouting</h1></div>
         <div class="pos-selector-nav">
-            <label for="position-select">SELECT POSITION:</label>
+            <label for="position-select">POSITION GROUP</label>
             <select id="position-select"></select>
         </div>
     </div>
     
-    <div class="container">
+    <main class="container">
+        <div class="workspace-heading"><div><div class="eyebrow">Personnel &amp; evaluation</div><h2>Player evaluation</h2><p>Compare prospects against NFL draft benchmarks.</p></div><div class="season-note"><strong>Draft benchmark</strong>2022–2026 classes</div></div>
         <div class="metrics-container" id="top-metrics"></div>
         
         <div class="panel">
+            <div class="panel-heading"><h3>Athletic profile</h3><span>Explore measurables · Select players on the chart</span></div>
             <div class="controls-row">
+                <div class="control-group year-filter-group">
+                    <label for="year-filter-btn">HS graduation year</label>
+                    <button type="button" id="year-filter-btn" class="control-select year-filter-btn" aria-haspopup="true" aria-expanded="false"></button>
+                    <div id="year-filter-panel" class="year-filter-panel" hidden></div>
+                </div>
                 <div class="control-group">
-                    <label>View Mode</label>
+                    <label for="chart-type">Visualization</label>
                     <select id="chart-type" class="control-select">
                         <option value="scatter">Scatter Plot</option>
                         <option value="histogram">Histogram</option>
                     </select>
                 </div>
                 <div class="control-group">
-                    <label id="x-label">Metric A</label>
+                    <label for="x-select" id="x-label">Metric A</label>
                     <select id="x-select" class="control-select"></select>
                 </div>
                 <div class="control-group" id="y-group">
-                    <label>Metric B</label>
+                    <label for="y-select">Metric B</label>
                     <select id="y-select" class="control-select"></select>
                 </div>
                 <div class="control-group" style="padding-bottom: 8px;">
                     <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: var(--text-dark); margin: 0; text-transform: none; font-size: 14px; font-weight: 600;">
                         <input type="checkbox" id="toggle-recruits" checked style="width: 18px; height: 18px; accent-color: var(--primary);">
-                        Show Recruits
+                        Show UCReport players
+                    </label>
+                </div>
+                <div class="control-group" style="padding-bottom: 8px;">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: var(--text-dark); margin: 0; text-transform: none; font-size: 14px; font-weight: 600;">
+                        <input type="checkbox" id="toggle-board-only" checked style="width: 18px; height: 18px; accent-color: var(--primary);">
+                        Board only
                     </label>
                 </div>
                 <div class="control-group" style="margin-left: auto; padding-bottom: 5px;">
@@ -664,10 +821,35 @@ def build_html():
             </div>
             <div id="player-cards-container" class="cards-grid"></div>
         </div>
-    </div>
+    <footer class="footer"><span>Texas Football · Scouting</span><span>Player evaluation workspace</span></footer>
+    </main>
 
     <script>
         const posData = {json_data};
+        const DEFAULT_YEARS = [{default_years_js}];
+        const BOARD_YEARS = new Set([{board_years_js}]);
+        // The 'all' group ships without players to avoid duplicating every
+        // recruit a second time in the page payload; build it here from the
+        // recruits already present in the per-position groups, deduped by id.
+        // Re-run after extra_recruits.json is merged in so 'all' picks up the newly added years too.
+        function rebuildAllGroup() {{
+            if (!posData.all) return;
+            const seen = new Set();
+            const combined = [];
+            Object.entries(posData).forEach(([code, group]) => {{
+                if (code === 'all') return;
+                group.players.forEach(p => {{
+                    if (!p.is_recruit) return;
+                    if (p.player_id != null) {{
+                        if (seen.has(p.player_id)) return;
+                        seen.add(p.player_id);
+                    }}
+                    combined.push(p);
+                }});
+            }});
+            posData.all.players = combined;
+        }}
+        rebuildAllGroup();
         // currentPos is set AFTER options are populated so it matches what the dropdown shows
         let currentPos = '';
 
@@ -812,6 +994,7 @@ def build_html():
         const ySelect = document.getElementById('y-select');
         const chartType = document.getElementById('chart-type');
         const toggleRecruits = document.getElementById('toggle-recruits');
+        const toggleBoardOnly = document.getElementById('toggle-board-only');
         
         Object.keys(posData).forEach(code => {{
             const opt = document.createElement('option');
@@ -823,13 +1006,150 @@ def build_html():
         // Sync currentPos with whatever the dropdown shows on load
         currentPos = posSelect.value;
 
+        // The HS Graduation Year control is a checkbox multi-select: drafted
+        // players always show regardless of what's checked (that's the point of
+        // the default "drafted + 2027 + 2028" view); only recruits get filtered
+        // by year. The full recruit history (~57k rows across every other class)
+        // isn't shipped in the page — it lives in extra_recruits.json and is
+        // fetched once, lazily, the first time the panel's "Show more years"
+        // action runs, so the default load stays small and fast.
+        let selectedYears = new Set(DEFAULT_YEARS);
+        let extraLoaded = false;
+        let extraLoading = false;
+
+        const yearBtn = document.getElementById('year-filter-btn');
+        const yearPanel = document.getElementById('year-filter-panel');
+
+        function updateYearButtonLabel() {{
+            yearBtn.textContent = selectedYears.size
+                ? [...selectedYears].sort((a, b) => b - a).join(', ')
+                : 'No recruit classes';
+        }}
+
+        function yearCountsForCurrentPos() {{
+            const counts = new Map();
+            (posData[currentPos].players || []).forEach(p => {{
+                if (!p.is_recruit || p.class_field == null) return;
+                counts.set(p.class_field, (counts.get(p.class_field) || 0) + 1);
+            }});
+            return counts;
+        }}
+
+        async function loadExtraYears() {{
+            if (extraLoaded || extraLoading) return;
+            extraLoading = true;
+            renderYearPanel();
+            try {{
+                const resp = await fetch('extra_recruits.json');
+                const extra = await resp.json();
+                Object.entries(extra).forEach(([code, group]) => {{
+                    if (!posData[code]) posData[code] = {{ name: group.name, players: [] }};
+                    posData[code].players = posData[code].players.concat(group.players);
+                }});
+                rebuildAllGroup();
+                extraLoaded = true;
+            }} catch (err) {{
+                console.error('Failed to load additional recruit classes', err);
+                alert('Could not load additional recruit classes. Check that extra_recruits.json is reachable (this requires serving the page over http, not file://).');
+            }} finally {{
+                extraLoading = false;
+                renderYearPanel();
+            }}
+        }}
+
+        function renderYearPanel() {{
+            const counts = yearCountsForCurrentPos();
+            const years = [...counts.keys()].sort((a, b) => b - a);
+            yearPanel.innerHTML = '';
+
+            years.forEach(year => {{
+                const row = document.createElement('label');
+                row.className = 'yf-row';
+                const cb = document.createElement('input');
+                cb.type = 'checkbox';
+                cb.checked = selectedYears.has(year);
+                cb.onchange = () => {{
+                    if (cb.checked) selectedYears.add(year); else selectedYears.delete(year);
+                    updateYearButtonLabel();
+                    init();
+                }};
+                const span = document.createElement('span');
+                span.innerHTML = `${{year}} <span class="yf-count">(${{counts.get(year)}})</span>`;
+                row.appendChild(cb);
+                row.appendChild(span);
+                yearPanel.appendChild(row);
+            }});
+
+            const hr = document.createElement('hr');
+            hr.className = 'yf-divider';
+            yearPanel.appendChild(hr);
+
+            const actions = document.createElement('div');
+            actions.className = 'yf-actions';
+            if (!extraLoaded) {{
+                const loadBtn = document.createElement('button');
+                loadBtn.type = 'button';
+                loadBtn.textContent = extraLoading ? 'Loading…' : 'Show more years (incl. drafted players\\' HS classmates)';
+                loadBtn.disabled = extraLoading;
+                loadBtn.onclick = (e) => {{ e.stopPropagation(); loadExtraYears(); }};
+                actions.appendChild(loadBtn);
+            }} else {{
+                const selectAllBtn = document.createElement('button');
+                selectAllBtn.type = 'button';
+                selectAllBtn.textContent = 'Select all';
+                selectAllBtn.onclick = (e) => {{
+                    e.stopPropagation();
+                    years.forEach(y => selectedYears.add(y));
+                    renderYearPanel(); updateYearButtonLabel(); init();
+                }};
+                const resetBtn = document.createElement('button');
+                resetBtn.type = 'button';
+                resetBtn.textContent = 'Reset to default';
+                resetBtn.onclick = (e) => {{
+                    e.stopPropagation();
+                    selectedYears = new Set(DEFAULT_YEARS);
+                    renderYearPanel(); updateYearButtonLabel(); init();
+                }};
+                actions.appendChild(selectAllBtn);
+                actions.appendChild(resetBtn);
+            }}
+            yearPanel.appendChild(actions);
+        }}
+
+        yearBtn.onclick = () => {{
+            const opening = yearPanel.hidden;
+            yearPanel.hidden = !opening;
+            yearBtn.setAttribute('aria-expanded', String(opening));
+            if (opening) renderYearPanel();
+        }};
+        document.addEventListener('click', (e) => {{
+            if (!yearPanel.hidden && !yearPanel.contains(e.target) && e.target !== yearBtn) {{
+                yearPanel.hidden = true;
+                yearBtn.setAttribute('aria-expanded', 'false');
+            }}
+        }});
+
+        updateYearButtonLabel();
+        function getFilteredPlayers() {{
+            return posData[currentPos].players.filter(p => !p.is_recruit || selectedYears.has(p.class_field));
+        }}
+        // Shared by the scatter and histogram renderers: "Show UCReport players" drops recruits
+        // entirely, "Board only" narrows the remaining recruits down to actual board members
+        // (years without a board export, e.g. anything beyond the current 2027/2028 boards, show none
+        // when this is checked).
+        function applyChartFilters(players) {{
+            let result = toggleRecruits.checked ? players : players.filter(p => !p.is_recruit);
+            if (toggleBoardOnly.checked) result = result.filter(p => !p.is_recruit || p.on_board);
+            return result;
+        }}
+
         function getActiveMetrics() {{
             const allowed = positionMetrics[currentPos] || Object.keys(metricDefs);
             return allowed.filter(k => metricDefs[k]);
         }}
 
         function getChartMetrics() {{
-            const players = posData[currentPos].players;
+            const players = getFilteredPlayers();
             if (!players.length) return [];
             return getActiveMetrics().filter(k =>
                 players.some(p => p[k] != null && !isNaN(p[k]))
@@ -858,11 +1178,11 @@ def build_html():
                 return `${{ft}}'${{inch}}"`;
             }}
             const def = metricDefs[key];
-            return v.toFixed(def.decimals) + (def.unit ? ' ' + def.unit : '');
+            return Number(v).toFixed(def.decimals) + (def.unit ? ' ' + def.unit : '');
         }}
 
         function updateTopMetrics() {{
-            const drafted = posData[currentPos].players.filter(p => !p.is_recruit);
+            const drafted = getFilteredPlayers().filter(p => !p.is_recruit);
             const container = document.getElementById('top-metrics');
             container.innerHTML = '';
             
@@ -875,7 +1195,7 @@ def build_html():
 
             display.forEach(m => {{
                 const vals = drafted.map(p => p[m]).filter(v => v !== null && !isNaN(v));
-                const avg = vals.length ? vals.reduce((a,b) => a+b, 0) / vals.length : 0;
+                const avg = vals.length ? vals.reduce((a,b) => a+b, 0) / vals.length : null;
                 container.innerHTML += `
                     <div class="metric-card">
                         <div class="metric-title">AVG DRAFTED ${{metricDefs[m].label}}</div>
@@ -885,7 +1205,13 @@ def build_html():
             }});
         }}
 
-        function renderCards(data) {{
+        function escapeText(value) {{
+            const node = document.createElement('span');
+            node.textContent = String(value ?? '');
+            return node.innerHTML;
+        }}
+        function renderCards(data, offset = 0) {{
+            data = applyChartFilters(data);
             const container = document.getElementById('player-cards-container');
             container.innerHTML = '';
             document.getElementById('player-count').innerText = `${{data.length}} PLAYERS`;
@@ -897,12 +1223,13 @@ def build_html():
 
             const activePosMetrics = getActiveMetrics();
 
-            data.forEach(p => {{
+            const visibleCards = data.slice(offset, offset + 100);
+            visibleCards.forEach(p => {{
                 const card = document.createElement('div');
                 card.className = 'player-card';
                 const tagClass = p.is_recruit ? 'tag-recruit' : 'tag-nfl';
-                const tagText = p.is_recruit ? 'Recruit' : 'Drafted';
-                const draftInfo = p.is_recruit ? 'HS Prospect' : (p.ROUND ? `Round ${{p.ROUND}}` : 'UDFA');
+                const tagText = p.career_outcome || 'Outcome unverified';
+                const draftInfo = p.is_recruit ? (p.class_field ? `HS class ${{p.class_field}}` : 'HS class unknown') : (p.ROUND ? `Round ${{p.ROUND}}` : 'Draft status unverified');
 
                 let metricsHtml = '';
                 activePosMetrics.forEach(m => {{
@@ -917,15 +1244,30 @@ def build_html():
                 }});
 
                 card.innerHTML = `
-                    <div class="card-type-tag ${{tagClass}}">${{tagText}}</div>
+                    <div class="card-type-tag ${{tagClass}}">${{escapeText(tagText)}}</div>
                     <div class="card-header">
-                        <div class="card-name">${{p.NAME}}</div>
-                        <div class="card-school">${{p.SCHOOL || '-'}} • ${{draftInfo}}</div>
+                        <div class="card-name">${{escapeText(p.NAME)}}</div>
+                        <div class="card-school">${{escapeText(p.SCHOOL || '-')}} • ${{escapeText(draftInfo)}}</div>
                     </div>
                     <div class="metrics-grid">${{metricsHtml}}</div>
                 `;
                 container.appendChild(card);
             }});
+            if (data.length > 100) {{
+                const pager = document.createElement('div');
+                pager.style.cssText = 'grid-column:1/-1;display:flex;gap:12px;align-items:center';
+                const label = document.createElement('span');
+                label.textContent = `${{offset + 1}}–${{Math.min(offset + 100, data.length)}} of ${{data.length}}`;
+                pager.appendChild(label);
+                [['Previous', offset - 100], ['Next', offset + 100]].forEach(([text, next]) => {{
+                    const button = document.createElement('button');
+                    button.className = 'btn-clear'; button.style.display = 'block';
+                    button.textContent = text; button.disabled = next < 0 || next >= data.length;
+                    button.onclick = () => renderCards(data, next);
+                    pager.appendChild(button);
+                }});
+                container.appendChild(pager);
+            }}
         }}
 
         let traceDataMap = {{}};
@@ -938,10 +1280,15 @@ def build_html():
             
             document.getElementById('y-group').style.display = isHist ? 'none' : 'flex';
             
-            const all = posData[currentPos].players;
-            let players = toggleRecruits.checked ? all : all.filter(p => !p.is_recruit);
-            
+            const all = getFilteredPlayers();
+            let players = applyChartFilters(all);
+
             traceDataMap = {{}};
+            if (!metricDefs[xField] || (!isHist && !metricDefs[yField])) {{
+                Plotly.newPlot('plot', [], {{ annotations: [{{ text: 'No measurements available for these filters', showarrow: false }}] }}, {{ displaylogo: false }});
+                renderCards(players);
+                return;
+            }}
 
             if (isHist) {{
                 const valid = players.filter(p => p[xField] !== null && !isNaN(p[xField]));
@@ -954,7 +1301,7 @@ def build_html():
                     x: draftedX,
                     type: 'histogram',
                     name: 'Drafted',
-                    marker: {{ color: '#CBD5E0' }},
+                    marker: {{ color: '#D9CDBE' }},
                     opacity: 0.8
                 }};
                 if (binSpec) histTrace.xbins = binSpec;
@@ -971,7 +1318,34 @@ def build_html():
                 }}
                 const yMaxCount = Math.max(...Object.values(draftBinCounts), 1);
 
-                if (recruits.length) {{
+                // Stacking one diamond marker per recruit reads fine for a couple
+                // hundred players, but with thousands in a bin the stack piles into
+                // a solid wedge that swallows the drafted bars. Past that size, draw
+                // recruits as their own semi-transparent bar (still overlaid on the
+                // drafted bars) instead of individual stacked points.
+                const useRecruitHistogram = recruits.length > 200;
+                let maxRecruitY = 0;
+
+                if (recruits.length && useRecruitHistogram) {{
+                    const recruitTrace = {{
+                        x: recruits.map(p => p[xField]),
+                        type: 'histogram',
+                        name: 'UCReport players',
+                        marker: {{ color: '#BF5700' }},
+                        opacity: 0.55
+                    }};
+                    if (binSpec) recruitTrace.xbins = binSpec;
+                    traces.push(recruitTrace);
+
+                    if (binSpec) {{
+                        const recruitBinCounts = {{}};
+                        recruits.forEach(p => {{
+                            const bin = Math.floor((p[xField] - binSpec.start) / binSpec.size);
+                            recruitBinCounts[bin] = (recruitBinCounts[bin] || 0) + 1;
+                        }});
+                        maxRecruitY = Math.max(...Object.values(recruitBinCounts), 0);
+                    }}
+                }} else if (recruits.length) {{
                     // Assign each recruit a bin index and slot so they stack on top of their bar
                     const rBuckets = {{}};
                     recruits.forEach(p => {{
@@ -986,14 +1360,15 @@ def build_html():
                         x: recruits.map(p => p[xField]),
                         y: recruits.map(p => 0.5 + p._jitterSlot * 0.8),
                         mode: 'markers',
-                        type: 'scatter',
-                        name: 'Recruits',
+                        type: 'scattergl',
+                        name: 'UCReport players',
                         hoverinfo: 'none',
                         selectedpoints: null,
                         selected: {{ marker: {{ opacity: 1 }} }},
                         unselected: {{ marker: {{ opacity: 1 }} }},
-                        marker: {{ color: '#2ECC71', size: 12, symbol: 'diamond' }}
+                        marker: {{ color: '#BF5700', size: 12, symbol: 'diamond' }}
                     }});
+                    maxRecruitY = recruits.length ? 0.5 + Math.max(...recruits.map(p => p._jitterSlot)) * 0.8 : 0;
                 }}
 
                 // Compute percentiles from drafted players only
@@ -1015,8 +1390,6 @@ def build_html():
 
                 const yaxisCfg = {{ title: 'Frequency' }};
                 if (binSpec) {{
-                    const maxRecruitSlot = recruits.length ? Math.max(...recruits.map(p => p._jitterSlot)) : 0;
-                    const maxRecruitY = recruits.length ? 0.5 + maxRecruitSlot * 0.8 : 0;
                     const yTop = Math.ceil(Math.max(yMaxCount, maxRecruitY)) + 1;
                     const yTickVals = Array.from({{length: yTop + 1}}, (_, i) => i);
                     Object.assign(yaxisCfg, {{ range: [0, yTop], tickmode: 'array', tickvals: yTickVals }});
@@ -1029,7 +1402,7 @@ def build_html():
                     barmode: 'overlay',
                     dragmode: 'select',
                     margin: {{ t: 50 }},
-                    plot_bgcolor: 'white',
+                    plot_bgcolor: 'white', paper_bgcolor: 'white', font: {{ family: 'Arial, sans-serif', color: '#706B64', size: 12 }},
                     shapes: [
                         {{ type: 'line', x0: p50,  x1: p50,  y0: 0, y1: 1, yref: 'paper', line: {{ color: '#4A5568', dash: 'dash', width: 2 }} }},
                         {{ type: 'line', x0: pBot, x1: pBot, y0: 0, y1: 1, yref: 'paper', line: {{ color: '#E53E3E', width: 2.5 }} }},
@@ -1057,19 +1430,22 @@ def build_html():
                     ]
                 }};
                 
+                if (!draftedVals.length) {{ layout.shapes = []; layout.annotations = []; }}
                 if (isSpeed) layout.xaxis.autorange = 'reversed';
 
                 
                 Plotly.newPlot('plot', traces, layout, {{ displaylogo: false }});
                 traceDataMap[0] = drafted;
-                if (recruits.length) traceDataMap[1] = recruits;
+                if (recruits.length && !useRecruitHistogram) traceDataMap[1] = recruits;
 
-                // Hover card for recruit points on the histogram
+                // Hover card for individual recruit points — only wired up when recruits
+                // are drawn as stacked diamonds (small N); the large-N histogram bars use
+                // Plotly's default aggregate-count hover instead.
                 const plotDivHist = document.getElementById('plot');
                 const tooltip = document.getElementById('hover-tooltip');
                 plotDivHist.on('plotly_hover', function(eventData) {{
                     const pt = eventData.points[0];
-                    if (pt.curveNumber !== 1) {{ tooltip.style.display = 'none'; return; }}
+                    if (useRecruitHistogram || pt.curveNumber !== 1) {{ tooltip.style.display = 'none'; return; }}
                     const recruit = traceDataMap[1] && traceDataMap[1][pt.pointIndex];
                     if (!recruit) return;
                     const def = metricDefs[xField] || {{ label: xField }};
@@ -1096,22 +1472,30 @@ def build_html():
                     p[yField] !== null && !isNaN(p[yField])
                 );
                 
+                // With thousands of recruits on screen at once, full-size opaque
+                // markers overplot into an unreadable blob — scale size/opacity
+                // down as the point count grows so individual clusters stay legible.
+                const pointCount = valid.length;
+                const recruitSize = pointCount > 4000 ? 4 : pointCount > 1000 ? 6 : pointCount > 250 ? 9 : 14;
+                const baseOpacity = pointCount > 4000 ? 0.35 : pointCount > 1000 ? 0.5 : pointCount > 250 ? 0.7 : 0.9;
+
                 const trace = {{
                     x: valid.map(p => p[xField]),
                     y: valid.map(p => p[yField]),
                     text: valid.map(p => p.NAME),
                     mode: 'markers',
-                    type: 'scatter',
+                    type: 'scattergl',
                     marker: {{
                         size: valid.map(p => {{
-                            if (p.is_recruit) return 14;
+                            if (p.is_recruit) return recruitSize;
                             const pick = p['PICK #'];
                             if (!pick || isNaN(pick)) return 8;   // UDFA
                             // Linear scale: pick 1 = 28px, pick 252 = 8px
                             return Math.max(8, Math.round(28 - (pick - 1) * (20 / 251)));
                         }}),
-                        color: valid.map(p => p.is_recruit ? '#2ECC71' : (nflColors[p.TEAM] || '#BF5700')),
-                        line: {{ width: 1, color: 'white' }}
+                        color: valid.map(p => p.is_recruit ? '#BF5700' : (nflColors[p.TEAM] || '#BF5700')),
+                        opacity: valid.map(p => p.is_recruit ? baseOpacity : 1),
+                        line: {{ width: pointCount > 1000 ? 0 : 1, color: 'white' }}
                     }},
                     selected: {{ marker: {{ opacity: 1 }} }},
                     unselected: {{ marker: {{ opacity: 0.2 }} }}
@@ -1124,7 +1508,7 @@ def build_html():
                     dragmode: 'select',
                     margin: {{ t: 60 }},
                     hovermode: 'closest',
-                    plot_bgcolor: 'white'
+                    plot_bgcolor: 'white', paper_bgcolor: 'white', font: {{ family: 'Arial, sans-serif', color: '#706B64', size: 12 }}
                 }};
 
                 if (metricDefs[xField] && metricDefs[xField].unit === 's') {{
@@ -1162,8 +1546,8 @@ def build_html():
 
             function redrawHistWithSelection() {{
                 const xField = xSelect.value;
-                const all = posData[currentPos].players;
-                let players = toggleRecruits.checked ? all : all.filter(p => !p.is_recruit);
+                const all = getFilteredPlayers();
+                let players = applyChartFilters(all);
                 const valid = players.filter(p => p[xField] !== null && !isNaN(p[xField]));
                 const drafted = valid.filter(p => !p.is_recruit);
                 const recruits = valid.filter(p => p.is_recruit);
@@ -1187,7 +1571,7 @@ def build_html():
                     return histSelections.some(selection => xMin < selection.xMax && xMax > selection.xMin)
                         ? '#BF5700' : '#E2E8F0';
                 }});
-                const barBorders = barColors.map(color => color === '#BF5700' ? '#9E4800' : '#CBD5E0');
+                const barBorders = barColors.map(color => color === '#BF5700' ? '#9E4800' : '#D9CDBE');
 
                 const traces = [{{
                     x: centers,
@@ -1202,25 +1586,43 @@ def build_html():
                     opacity: 0.9
                 }}];
 
-                if (recruits.length) {{
+                const redrawUseRecruitHistogram = recruits.length > 200;
+                let maxRecruitY2 = 0;
+
+                if (recruits.length && redrawUseRecruitHistogram) {{
+                    const recruitTrace = {{
+                        x: recruits.map(p => p[xField]),
+                        type: 'histogram',
+                        name: 'UCReport players',
+                        marker: {{ color: '#BF5700' }},
+                        opacity: 0.55,
+                        xbins: binSpec
+                    }};
+                    traces.push(recruitTrace);
+                    const recruitBinCounts = {{}};
+                    recruits.forEach(p => {{
+                        const bin = Math.floor((p[xField] - binSpec.start) / binSpec.size);
+                        recruitBinCounts[bin] = (recruitBinCounts[bin] || 0) + 1;
+                    }});
+                    maxRecruitY2 = Math.max(...Object.values(recruitBinCounts), 0);
+                }} else if (recruits.length) {{
                     // Reuse _binIndex/_jitterSlot from initial draw; stack on bars using current counts
                     traces.push({{
                         x: recruits.map(p => p[xField]),
                         y: recruits.map(p => 0.5 + (p._jitterSlot || 0) * 0.8),
                         mode: 'markers',
-                        type: 'scatter',
-                        name: 'Recruits',
+                        type: 'scattergl',
+                        name: 'UCReport players',
                         hoverinfo: 'none',
                         selectedpoints: null,
                         selected: {{ marker: {{ opacity: 1 }} }},
                         unselected: {{ marker: {{ opacity: 1 }} }},
-                        marker: {{ color: '#2ECC71', size: 12, symbol: 'diamond' }}
+                        marker: {{ color: '#BF5700', size: 12, symbol: 'diamond' }}
                     }});
+                    maxRecruitY2 = 0.5 + Math.max(...recruits.map(p => p._jitterSlot || 0)) * 0.8;
                 }}
 
                 const yMax2 = Math.max(...counts, 1);
-                const maxRecruitSlot2 = recruits.length ? Math.max(...recruits.map(p => p._jitterSlot || 0)) : 0;
-                const maxRecruitY2 = recruits.length ? 0.5 + maxRecruitSlot2 * 0.8 : 0;
                 const yTop2 = Math.ceil(Math.max(yMax2, maxRecruitY2)) + 1;
                 const yTickVals2 = Array.from({{length: yTop2 + 1}}, (_, i) => i);
                 const nextLayout = {{
@@ -1249,9 +1651,8 @@ def build_html():
 
             function updateHistFilter() {{
                 const xField = xSelect.value;
-                const all = posData[currentPos].players;
-                const showRec = toggleRecruits.checked;
-                const activePlayers = showRec ? all : all.filter(p => !p.is_recruit);
+                const all = getFilteredPlayers();
+                const activePlayers = applyChartFilters(all);
                 if (!histSelections.length) {{
                     renderCards(all);
                     document.getElementById('clear-selection').style.display = 'none';
@@ -1311,9 +1712,8 @@ def build_html():
                 
                 const mode = chartType.value;
                 const xField = xSelect.value;
-                const all = posData[currentPos].players;
-                const showRec = toggleRecruits.checked;
-                const activePlayers = showRec ? all : all.filter(p => !p.is_recruit);
+                const all = getFilteredPlayers();
+                const activePlayers = applyChartFilters(all);
                 
                 if (mode === 'histogram') {{
                     const range = eventData.range;
@@ -1342,6 +1742,7 @@ def build_html():
 
         posSelect.onchange = () => {{
             currentPos = posSelect.value;
+            if (!yearPanel.hidden) renderYearPanel();
             init();
         }};
         
@@ -1349,6 +1750,7 @@ def build_html():
         ySelect.onchange = drawPlot;
         chartType.onchange = drawPlot;
         toggleRecruits.onchange = drawPlot;
+        toggleBoardOnly.onchange = drawPlot;
         
         document.getElementById('clear-selection').onclick = () => {{
             Plotly.restyle('plot', 'selectedpoints', null);

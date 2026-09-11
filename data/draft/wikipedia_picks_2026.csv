@@ -1,0 +1,258 @@
+year,round,pick,team,player,pos,college
+2026,1,1,Las Vegas Raiders,Fernando Mendoza,QB,Indiana
+2026,1,2,New York Jets,David Bailey,OLB,Texas Tech
+2026,1,3,Arizona Cardinals,Jeremiyah Love,RB,Notre Dame
+2026,1,4,Tennessee Titans,Carnell Tate,WR,Ohio State
+2026,1,5,New York Giants,Arvell Reese,LB,Ohio State
+2026,1,6,Kansas City Chiefs,Mansoor Delane,CB,LSU
+2026,1,7,Washington Commanders,Sonny Styles,LB,Ohio State
+2026,1,8,New Orleans Saints,Jordyn Tyson,WR,Arizona State
+2026,1,9,Cleveland Browns,Spencer Fano,T,Utah
+2026,1,10,New York Giants,Francis Mauigoa,G,Miami (FL)
+2026,1,11,Dallas Cowboys,Caleb Downs,S,Ohio State
+2026,1,12,Miami Dolphins,Kadyn Proctor,T,Alabama
+2026,1,13,Los Angeles Rams,Ty Simpson,QB,Alabama
+2026,1,14,Baltimore Ravens,Vega Ioane,G,Penn State
+2026,1,15,Tampa Bay Buccaneers,Rueben Bain Jr.,DE,Miami (FL)
+2026,1,16,New York Jets,Kenyon Sadiq,TE,Oregon
+2026,1,17,Detroit Lions,Blake Miller,T,Clemson
+2026,1,18,Minnesota Vikings,Caleb Banks,DE,Florida
+2026,1,19,Carolina Panthers,Monroe Freeling,T,Georgia
+2026,1,20,Philadelphia Eagles,Makai Lemon,WR,USC
+2026,1,21,Pittsburgh Steelers,Max Iheanachor,T,Arizona State
+2026,1,22,Los Angeles Chargers,Akheem Mesidor,OLB,Miami (FL)
+2026,1,23,Dallas Cowboys,Malachi Lawrence,DE,UCF
+2026,1,24,Cleveland Browns,KC Concepcion,WR,Texas A&M
+2026,1,25,Chicago Bears,Dillon Thieneman,S,Oregon
+2026,1,26,Houston Texans,Keylan Rutledge,G,Georgia Tech
+2026,1,27,Miami Dolphins,Chris Johnson,CB,San Diego State
+2026,1,28,New England Patriots,Caleb Lomu,T,Utah
+2026,1,29,Kansas City Chiefs,Peter Woods,DT,Clemson
+2026,1,30,New York Jets,Omar Cooper Jr.,WR,Indiana
+2026,1,31,Tennessee Titans,Keldric Faulk,DE,Auburn
+2026,1,32,Seattle Seahawks,Jadarian Price,RB,Notre Dame
+2026,2,33,San Francisco 49ers,De'Zhaun Stribling,WR,Ole Miss
+2026,2,34,Arizona Cardinals,Chase Bisontis,G,Texas A&M
+2026,2,35,Buffalo Bills,T. J. Parker,DE,Clemson
+2026,2,36,Houston Texans,Kayden McDonald,DT,Ohio State
+2026,2,37,New York Giants,Colton Hood,CB,Tennessee
+2026,2,38,Las Vegas Raiders,Treydan Stukes,S,Arizona
+2026,2,39,Cleveland Browns,Denzel Boston,WR,Washington
+2026,2,40,Kansas City Chiefs,R Mason Thomas,DE,Oklahoma
+2026,2,41,Cincinnati Bengals,Cashius Howell,DE,Texas A&M
+2026,2,42,New Orleans Saints,Christen Miller,DT,Georgia
+2026,2,43,Miami Dolphins,Jacob Rodriguez,LB,Texas Tech
+2026,2,44,Detroit Lions,Derrick Moore,DE,Michigan
+2026,2,45,Baltimore Ravens,Zion Young,OLB,Missouri
+2026,2,46,Tampa Bay Buccaneers,Josiah Trotter,LB,Missouri
+2026,2,47,Pittsburgh Steelers,Germie Bernard,WR,Alabama
+2026,2,48,Atlanta Falcons,Avieon Terrell,CB,Clemson
+2026,2,49,Carolina Panthers,Lee Hunter,DT,Texas Tech
+2026,2,50,New York Jets,D'Angelo Ponds,CB,Indiana
+2026,2,51,Minnesota Vikings,Jake Golday,LB,Cincinnati
+2026,2,52,Green Bay Packers,Brandon Cisse,CB,South Carolina
+2026,2,53,Indianapolis Colts,CJ Allen,LB,Georgia
+2026,2,54,Philadelphia Eagles,Eli Stowers,TE,Vanderbilt
+2026,2,55,New England Patriots,Gabe Jacas,DE,Illinois
+2026,2,56,Jacksonville Jaguars,Nate Boerkircher,TE,Texas A&M
+2026,2,57,Chicago Bears,Logan Jones,C,Iowa
+2026,2,58,Cleveland Browns,Emmanuel McNeil-Warren,S,Toledo
+2026,2,59,Houston Texans,Marlin Klein,TE,Michigan
+2026,2,60,Tennessee Titans,Anthony Hill Jr.,LB,Texas
+2026,2,61,Los Angeles Rams,Max Klare,TE,Ohio State
+2026,2,62,Buffalo Bills,Davison Igbinosun,CB,Ohio State
+2026,2,63,Los Angeles Chargers,Jake Slaughter,C,Florida
+2026,2,64,Seattle Seahawks,Bud Clark,S,TCU
+2026,3,65,Arizona Cardinals,Carson Beck,QB,Miami (FL)
+2026,3,66,Denver Broncos,Tyler Onyedim,DT,Texas A&M
+2026,3,67,Las Vegas Raiders,Keyron Crawford,DE,Auburn
+2026,3,68,Philadelphia Eagles,Markel Bell,T,Miami (FL)
+2026,3,69,Chicago Bears,Sam Roush,TE,Stanford
+2026,3,70,San Francisco 49ers,Romello Height,OLB,Texas Tech
+2026,3,71,Washington Commanders,Antonio Williams,WR,Clemson
+2026,3,72,Cincinnati Bengals,Tacario Davis,CB,Washington
+2026,3,73,New Orleans Saints,Oscar Delp,TE,Georgia
+2026,3,74,New York Giants,Malachi Fields,WR,Notre Dame
+2026,3,75,Miami Dolphins,Caleb Douglas,WR,Texas Tech
+2026,3,76,Pittsburgh Steelers,Drew Allar,QB,Penn State
+2026,3,77,Green Bay Packers,Chris McClellan,DT,Missouri
+2026,3,78,Indianapolis Colts,A. J. Haulcy,S,LSU
+2026,3,79,Atlanta Falcons,Zachariah Branch,WR,Georgia
+2026,3,80,Baltimore Ravens,Ja'Kobi Lane,WR,USC
+2026,3,81,Jacksonville Jaguars,Albert Regis,DT,Texas A&M
+2026,3,82,Minnesota Vikings,Domonique Orange,DT,Iowa State
+2026,3,83,Carolina Panthers,Chris Brazzell II,WR,Tennessee
+2026,3,84,Tampa Bay Buccaneers,Ted Hurst,WR,Georgia State
+2026,3,85,Pittsburgh Steelers,Daylen Everette,CB,Georgia
+2026,3,86,Cleveland Browns,Austin Barber,T,Florida
+2026,3,87,Miami Dolphins,Will Kacmarek,TE,Ohio State
+2026,3,88,Jacksonville Jaguars,Emmanuel Pregnon,G,Oregon
+2026,3,89,Chicago Bears,Zavion Thomas,WR,LSU
+2026,3,90,San Francisco 49ers,Kaelon Black,RB,Indiana
+2026,3,91,Las Vegas Raiders,Trey Zuhn III,C,Texas A&M
+2026,3,92,Dallas Cowboys,Jaishawn Barham,OLB,Michigan
+2026,3,93,Los Angeles Rams,Keagen Trost,T,Missouri
+2026,3,94,Miami Dolphins,Chris Bell,WR,Louisville
+2026,3,95,New England Patriots,Eli Raridon,TE,Notre Dame
+2026,3,96,Pittsburgh Steelers,Gennings Dunker,T,Iowa
+2026,3,97,Minnesota Vikings,Caleb Tiernan,T,Northwestern
+2026,3,98,Minnesota Vikings,Jakobe Thomas,S,Miami (FL)
+2026,3,99,Seattle Seahawks,Julian Neal,CB,Arkansas
+2026,3,100,Jacksonville Jaguars,Jalen Huskey,S,Maryland
+2026,4,101,Las Vegas Raiders,Jermod McCoy,CB,Tennessee
+2026,4,102,Buffalo Bills,Jude Bowry,T,Boston College
+2026,4,103,New York Jets,Darrell Jackson Jr.,DT,Florida State
+2026,4,104,Arizona Cardinals,Kaleb Proctor,DT,Southeastern Louisiana
+2026,4,105,Los Angeles Chargers,Brenen Thompson,WR,Mississippi State
+2026,4,106,Houston Texans,Febechi Nwaiwu,G,Oklahoma
+2026,4,107,San Francisco 49ers,Gracen Halton,DT,Oklahoma
+2026,4,108,Denver Broncos,Jonah Coleman,RB,Washington
+2026,4,109,Kansas City Chiefs,Jadon Canady,CB,Oregon
+2026,4,110,New York Jets,Cade Klubnik,QB,Clemson
+2026,4,111,Denver Broncos,Kage Casey,T,Boise State
+2026,4,112,Dallas Cowboys,Drew Shelton,T,Penn State
+2026,4,113,Indianapolis Colts,Jalen Farmer,G,Kentucky
+2026,4,114,Dallas Cowboys,Devin Moore,CB,Florida
+2026,4,115,Baltimore Ravens,Elijah Sarratt,WR,Indiana
+2026,4,116,Tampa Bay Buccaneers,Keionte Scott,CB,Miami (FL)
+2026,4,117,Los Angeles Chargers,Travis Burke,T,Memphis
+2026,4,118,Detroit Lions,Jimmy Rolder,LB,Michigan
+2026,4,119,Jacksonville Jaguars,Wesley Williams,DE,Duke
+2026,4,120,Green Bay Packers,Dani Dennis-Sutton,DE,Penn State
+2026,4,121,Pittsburgh Steelers,Kaden Wetjen,WR,Iowa
+2026,4,122,Las Vegas Raiders,Mike Washington Jr.,RB,Arkansas
+2026,4,123,Houston Texans,Wade Woodaz,LB,Clemson
+2026,4,124,Chicago Bears,Malik Muhammad,CB,Texas
+2026,4,125,Buffalo Bills,Skyler Bell,WR,UConn
+2026,4,126,Buffalo Bills,Kaleb Elarms-Orr,LB,TCU
+2026,4,127,San Francisco 49ers,Carver Willis,T,Washington
+2026,4,128,Cincinnati Bengals,Connor Lew,C,Auburn
+2026,4,129,Carolina Panthers,Will Lee III,CB,Texas A&M
+2026,4,130,Miami Dolphins,Trey Moore,DE,Texas
+2026,4,131,Los Angeles Chargers,Genesis Smith,S,Arizona
+2026,4,132,New Orleans Saints,Jeremiah Wright,G,Auburn
+2026,4,133,Baltimore Ravens,Matthew Hibner,TE,SMU
+2026,4,134,Atlanta Falcons,Kendal Daniels,LB,Oklahoma
+2026,4,135,Indianapolis Colts,Bryce Boettcher,LB,Oregon
+2026,4,136,New Orleans Saints,Bryce Lance,WR,North Dakota State
+2026,4,137,Dallas Cowboys,LT Overton,DT,Alabama
+2026,4,138,Miami Dolphins,Kyle Louis,LB,Pittsburgh
+2026,4,139,San Francisco 49ers,Ephesians Prysock,CB,Washington
+2026,4,140,Cincinnati Bengals,Colbie Young,WR,Georgia
+2026,5,141,Houston Texans,Kamari Ramsey,S,USC
+2026,5,142,Tennessee Titans,Fernando Carmona,G,Arkansas
+2026,5,143,Arizona Cardinals,Reggie Virgil,WR,Texas Tech
+2026,5,144,Carolina Panthers,Sam Hecht,C,Kansas State
+2026,5,145,Los Angeles Chargers,Nick Barrett,DT,South Carolina
+2026,5,146,Cleveland Browns,Parker Brailsford,C,Alabama
+2026,5,147,Washington Commanders,Joshua Josephs,DE,Tennessee
+2026,5,148,Seattle Seahawks,Beau Stephens,G,Iowa
+2026,5,149,Cleveland Browns,Justin Jefferson,LB,Alabama
+2026,5,150,Las Vegas Raiders,Dalton Johnson,S,Arizona
+2026,5,151,Carolina Panthers,Zakee Wheatley,S,Penn State
+2026,5,152,Denver Broncos,Justin Joly,TE,NC State
+2026,5,153,Green Bay Packers,Jager Burton,C,Kentucky
+2026,5,154,San Francisco 49ers,Jaden Dugger,LB,Louisiana
+2026,5,155,Tampa Bay Buccaneers,DeMonte Capehart,DT,Clemson
+2026,5,156,Indianapolis Colts,George Gumbs Jr.,DE,Florida
+2026,5,157,Detroit Lions,Keith Abney II,CB,Arizona State
+2026,5,158,Miami Dolphins,Michael Taaffe,S,Texas
+2026,5,159,Minnesota Vikings,Max Bredeson,FB,Michigan
+2026,5,160,Tampa Bay Buccaneers,Billy Schrauth,G,Notre Dame
+2026,5,161,Kansas City Chiefs,Emmett Johnson,RB,Nebraska
+2026,5,162,Baltimore Ravens,Chandler Rivers,CB,Duke
+2026,5,163,Minnesota Vikings,Charles Demmings,CB,Stephen F. Austin
+2026,5,164,Jacksonville Jaguars,Tanner Koziol,TE,Houston
+2026,5,165,Tennessee Titans,Nicholas Singleton,RB,Penn State
+2026,5,166,Chicago Bears,Keyshaun Elliott,LB,Arizona State
+2026,5,167,Buffalo Bills,Jalon Kilgore,S,South Carolina
+2026,5,168,Detroit Lions,Kendrick Law,WR,Kentucky
+2026,5,169,Pittsburgh Steelers,Riley Nowakowski,TE,Indiana
+2026,5,170,Cleveland Browns,Joe Royer,TE,Cincinnati
+2026,5,171,New England Patriots,Karon Prunty,CB,Wake Forest
+2026,5,172,New Orleans Saints,Lorenzo Styles Jr.,S,Ohio State
+2026,5,173,Baltimore Ravens,Josh Cuevas,TE,Alabama
+2026,5,174,Baltimore Ravens,Adam Randall,RB,Clemson
+2026,5,175,Las Vegas Raiders,Hezekiah Masses,CB,California
+2026,5,176,Kansas City Chiefs,Cyrus Allen,WR,Cincinnati
+2026,5,177,Miami Dolphins,Kevin Coleman Jr.,WR,Missouri
+2026,5,178,Philadelphia Eagles,Cole Payton,QB,North Dakota State
+2026,5,179,San Francisco 49ers,Enrique Cruz Jr.,T,Kansas
+2026,5,180,Miami Dolphins,Seydou Traore,TE,Mississippi State
+2026,5,181,Buffalo Bills,Zane Durant,DT,Penn State
+2026,6,182,Cleveland Browns,Taylen Green,QB,Arkansas
+2026,6,183,Arizona Cardinals,Karson Sharar,LB,Iowa
+2026,6,184,Tennessee Titans,Jackie Marshall,DT,Baylor
+2026,6,185,Tampa Bay Buccaneers,Bauer Sharp,TE,LSU
+2026,6,186,New York Giants,Bobby Jamison-Travis,DT,Auburn
+2026,6,187,Washington Commanders,Kaytron Allen,RB,Penn State
+2026,6,188,New York Jets,Anez Cooper,G,Miami (FL)
+2026,6,189,Cincinnati Bengals,Brian Parker II,C,Duke
+2026,6,190,New Orleans Saints,Barion Brown,WR,LSU
+2026,6,191,Jacksonville Jaguars,Josh Cameron,WR,Baylor
+2026,6,192,New York Giants,J. C. Davis,T,Illinois
+2026,6,193,New York Giants,Jack Kelly,LB,BYU
+2026,6,194,Tennessee Titans,Pat Coogan,C,Indiana
+2026,6,195,Las Vegas Raiders,Malik Benson,WR,Oregon
+2026,6,196,New England Patriots,Dametrious Crownover,T,Texas A&M
+2026,6,197,Los Angeles Rams,CJ Daniels,WR,Miami (FL)
+2026,6,198,Minnesota Vikings,Demond Claiborne,RB,Wake Forest
+2026,6,199,Seattle Seahawks,Emmanuel Henderson,WR,Kansas
+2026,6,200,Miami Dolphins,DJ Campbell,G,Texas
+2026,6,201,Green Bay Packers,Domani Jackson,CB,Alabama
+2026,6,202,Los Angeles Chargers,Logan Taylor,G,Boston College
+2026,6,203,Jacksonville Jaguars,CJ Williams,WR,Stanford
+2026,6,204,Houston Texans,Lewis Bond,WR,Boston College
+2026,6,205,Detroit Lions,Skyler Gill-Howard,DT,Texas Tech
+2026,6,206,Los Angeles Chargers,Alex Harkey,G,Oregon
+2026,6,207,Philadelphia Eagles,Micah Morris,G,Georgia
+2026,6,208,Atlanta Falcons,Anterio Thompson,DT,Washington
+2026,6,209,Washington Commanders,Matt Gulbin,C,Michigan State
+2026,6,210,Pittsburgh Steelers,Gabriel Rubio,DT,Notre Dame
+2026,6,211,Baltimore Ravens,Ryan Eckley,P,Michigan State
+2026,6,212,New England Patriots,Namdi Obiazor,LB,TCU
+2026,6,213,Chicago Bears,Jordan van den Berg,DT,Georgia Tech
+2026,6,214,Indianapolis Colts,Caden Curry,DE,Ohio State
+2026,6,215,Atlanta Falcons,Harold Perkins Jr.,LB,LSU
+2026,6,216,Green Bay Packers,Trey Smack,K,Florida
+2026,7,217,Arizona Cardinals,Jayden Williams,T,Ole Miss
+2026,7,218,Dallas Cowboys,Anthony Smith,WR,East Carolina
+2026,7,219,New Orleans Saints,TJ Hall,CB,Iowa
+2026,7,220,Buffalo Bills,Toriano Pride Jr.,CB,Missouri
+2026,7,221,Cincinnati Bengals,Jack Endries,TE,Texas
+2026,7,222,Detroit Lions,Tyre West,DE,Tennessee
+2026,7,223,Washington Commanders,Athan Kaliakmanis,QB,Rutgers
+2026,7,224,Pittsburgh Steelers,Robert Spears-Jennings,S,Oklahoma
+2026,7,225,Tennessee Titans,Jaren Kanak,TE,Oklahoma
+2026,7,226,Cincinnati Bengals,Landon Robinson,DT,Navy
+2026,7,227,Carolina Panthers,Jackson Kuwatch,LB,Miami (OH)
+2026,7,228,New York Jets,VJ Payne,S,Kansas State
+2026,7,229,Las Vegas Raiders,Brandon Cleveland,DT,NC State
+2026,7,230,Pittsburgh Steelers,Eli Heidenreich,RB,Navy
+2026,7,231,Atlanta Falcons,Ethan Onianwa,T,Ohio State
+2026,7,232,Los Angeles Rams,Tim Keenan III,DT,Alabama
+2026,7,233,Jacksonville Jaguars,Zach Durfee,DE,Washington
+2026,7,234,New England Patriots,Behren Morton,QB,Texas Tech
+2026,7,235,Minnesota Vikings,Gavin Gerhardt,C,Cincinnati
+2026,7,236,Seattle Seahawks,Andre Fuller,CB,Toledo
+2026,7,237,Indianapolis Colts,Seth McGowan,RB,Kentucky
+2026,7,238,Miami Dolphins,Max Llewellyn,DE,Iowa
+2026,7,239,Buffalo Bills,Tommy Doman,P,Florida
+2026,7,240,Jacksonville Jaguars,Parker Hughes,LB,Middle Tennessee
+2026,7,241,Buffalo Bills,Ar'maj Reed-Adams,G,Texas A&M
+2026,7,242,Seattle Seahawks,Deven Eastern,DT,Minnesota
+2026,7,243,Houston Texans,Aiden Fisher,LB,Indiana
+2026,7,244,Philadelphia Eagles,Cole Wisniewski,S,Texas Tech
+2026,7,245,New England Patriots,Jam Miller,RB,Alabama
+2026,7,246,Denver Broncos,Miles Scott,S,Illinois
+2026,7,247,New England Patriots,Quintayvious Hutchins,DE,Boston College
+2026,7,248,Cleveland Browns,Carsen Ryan,TE,BYU
+2026,7,249,Kansas City Chiefs,Garrett Nussmeier,QB,LSU
+2026,7,250,Baltimore Ravens,Rayshaun Benny,DT,Michigan
+2026,7,251,Philadelphia Eagles,Uar Bernard,DT,nan
+2026,7,252,Philadelphia Eagles,Keyshawn James-Newby,DE,New Mexico
+2026,7,253,Baltimore Ravens,Evan Beerntsen,G,Northwestern
+2026,7,254,Indianapolis Colts,Deion Burks,WR,Oklahoma
+2026,7,255,Seattle Seahawks,Michael Dansby,CB,Arizona
+2026,7,256,Denver Broncos,Dallen Bentley,TE,Utah
+2026,7,257,Denver Broncos,Red Murdock,LB,Buffalo
