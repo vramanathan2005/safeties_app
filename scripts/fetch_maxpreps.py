@@ -1,4 +1,5 @@
 import argparse
+import html
 from pathlib import Path
 
 import pandas as pd
@@ -6,6 +7,7 @@ import requests
 import json
 import re
 import time
+import tempfile
 
 from recruit_sources import (
     MAXPREPS_PATH,
@@ -17,10 +19,14 @@ from recruit_sources import (
 parser = argparse.ArgumentParser(description="Fetch MaxPreps stats for a player CSV.")
 parser.add_argument("--players-csv", type=Path, default=RECRUIT_DATA_DIR / 'ucreport_data.csv',
                     help="Player CSV with player_id, first, last, and school fields")
+parser.add_argument("--output", type=Path, default=MAXPREPS_PATH)
+parser.add_argument("--limit", type=int, default=None)
 args = parser.parse_args()
 if not args.players_csv.is_file():
     parser.error(f"Player CSV not found: {args.players_csv}")
 df = pd.read_csv(args.players_csv)
+if args.limit is not None:
+    df = df.head(args.limit)
 recruit_board = load_recruit_board()
 board_by_name = {
     normalize_name(row["query_name"]): row
@@ -56,6 +62,38 @@ def clean_value(value):
     if value is None or pd.isna(value):
         return ""
     return str(value).strip()
+
+
+def next_page_value(document, key):
+    """Read a page-props value from legacy or streamed Next.js HTML."""
+    legacy = re.search(r'<script id="__NEXT_DATA__"[^>]*>(.*?)</script>', document)
+    if legacy:
+        payload = json.loads(legacy.group(1))
+        return payload.get("props", {}).get("pageProps", {}).get(key)
+
+    chunks = []
+    for script in re.findall(
+        r'<script[^>]*>\s*self\.__next_f\.push\((.*?)\)\s*</script>',
+        document,
+        flags=re.DOTALL,
+    ):
+        try:
+            frame = json.loads(html.unescape(script))
+        except json.JSONDecodeError:
+            continue
+        if isinstance(frame, list) and len(frame) > 1 and isinstance(frame[1], str):
+            chunks.append(frame[1])
+
+    stream = "".join(chunks)
+    marker = json.dumps(key) + ":"
+    start = stream.find(marker)
+    if start < 0:
+        return None
+    start += len(marker)
+    try:
+        return json.JSONDecoder().raw_decode(stream[start:])[0]
+    except json.JSONDecodeError:
+        return None
 
 
 def row_value(row, column):
@@ -385,15 +423,7 @@ for index, row in df.iterrows():
             time.sleep(1)
             continue
             
-        match = re.search(r'<script id="__NEXT_DATA__"[^>]*>(.*?)</script>', r.text)
-        if not match:
-            print(f"  -> Could not find __NEXT_DATA__ in search results.")
-            time.sleep(1)
-            continue
-            
-        data = json.loads(match.group(1))
-        props = data.get("props", {}).get("pageProps", {})
-        careers = props.get("initialCareerResults", [])
+        careers = next_page_value(r.text, "initialCareerResults") or []
         
         if not careers:
             print(f"  -> No career results found.")
@@ -428,15 +458,10 @@ for index, row in df.iterrows():
             print(f"  -> Stats fetch failed with status {r_stats.status_code}")
             continue
             
-        match_stats = re.search(r'<script id="__NEXT_DATA__"[^>]*>(.*?)</script>', r_stats.text)
-        if not match_stats:
-            print(f"  -> Could not find __NEXT_DATA__ in stats page.")
+        card_props = next_page_value(r_stats.text, "statsCardProps") or {}
+        if not card_props:
+            print("  -> Could not find stats data in the page.")
             continue
-            
-        stats_data = json.loads(match_stats.group(1))
-        stats_props = stats_data.get("props", {}).get("pageProps", {})
-        
-        card_props = stats_props.get("statsCardProps", {})
         career_rollup = card_props.get("careerRollup", {})
         groups = career_rollup.get("groups", [])
         
@@ -467,5 +492,9 @@ for index, row in df.iterrows():
     time.sleep(1) 
 
 df_maxpreps = pd.DataFrame(maxpreps_results)
-df_maxpreps.to_csv(MAXPREPS_PATH, index=False)
-print(f"\nDone! Saved to {MAXPREPS_PATH}")
+args.output.parent.mkdir(parents=True, exist_ok=True)
+with tempfile.NamedTemporaryFile(mode="w", suffix=".tmp", dir=args.output.parent, delete=False) as handle:
+    temporary_output = Path(handle.name)
+    df_maxpreps.to_csv(handle, index=False)
+temporary_output.replace(args.output)
+print(f"\nDone! Saved to {args.output}")
