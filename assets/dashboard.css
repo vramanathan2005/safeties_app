@@ -55,6 +55,31 @@ select:focus-visible,button:focus-visible,input:focus-visible { outline:3px soli
 .year-filter-panel .yf-actions { display:flex; justify-content:space-between; gap:8px; padding:4px; font-size:12px; }
 .year-filter-panel .yf-actions button { background:none; border:0; color:var(--primary); font-weight:800; cursor:pointer; padding:2px; font-size:12px; }
 .year-filter-panel .yf-actions button:hover { text-decoration:underline; }
-.year-filter-panel .yf-loading { font-size:13px; color:#5c5a56; padding:6px 4px; }
-@media(max-width:680px) { .navbar { margin-top:14px; } .brand-logo { width:60px; height:54px; } .pos-selector-nav { width:100%; justify-content:space-between; } .metrics-container { grid-template-columns:repeat(2,minmax(0,1fr)); } .metric-card { padding:12px; } .metric-title { font-size:11px; } .panel { box-shadow:5px 5px 0 #202020; } .control-group { flex:1 1 140px; } select.control-select { width:100%; } .year-filter-btn { width:100%; } .year-filter-panel { width:100%; } .panel-heading span { display:none; } .cards-grid { grid-template-columns:minmax(0,1fr); } #plot { height:420px; } }
+.player-search-group { position:relative; }
+.player-search-box { position:relative; display:flex; align-items:center; width:220px; }
+input.player-search-input { width:100%; border:2px solid #202020; border-radius:0; background:#fff; color:#222; padding:10px 28px 10px 10px; font-family:inherit; font-size:14px; font-weight:600; box-sizing:border-box; }
+input.player-search-input::placeholder { color:#767471; font-weight:500; }
+.search-clear-btn { position:absolute; right:8px; background:none; border:0; font-size:18px; font-weight:bold; color:#5c5a56; cursor:pointer; padding:2px 4px; line-height:1; display:none; }
+.search-clear-btn:hover { color:#bf5700; }
+.player-search-dropdown { position:absolute; top:calc(100% + 4px); left:0; z-index:50; width:340px; max-height:340px; overflow-y:auto; background:#fff; border:2px solid #202020; box-shadow:4px 4px 0 #202020; padding:0; margin:0; }
+.search-result-group-title { padding:6px 10px; font-size:11px; font-weight:800; background:#f4efe4; color:#5c5a56; text-transform:uppercase; border-bottom:1px solid #202020; letter-spacing:.04em; }
+.search-result-item { padding:8px 12px; cursor:pointer; border-bottom:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center; gap:8px; }
+.search-result-item:hover, .search-result-item.selected { background:#f7dfcc; }
+.search-result-main { display:flex; flex-direction:column; min-width:0; }
+.search-result-name { font-size:14px; font-weight:800; color:#202020; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.search-result-name mark { background:#ffe3a8; color:#202020; font-weight:800; padding:0 1px; }
+.search-result-sub { font-size:12px; color:#5c5a56; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.search-result-badges { display:flex; gap:5px; align-items:center; flex-shrink:0; }
+.search-badge-pos { font-size:10px; font-weight:800; padding:2px 6px; background:#202020; color:#fff; text-transform:uppercase; }
+.search-badge-tag { font-size:10px; font-weight:700; padding:2px 6px; text-transform:uppercase; }
+.tag-recruit-badge { background:#bf5700; color:#fff; }
+.tag-nfl-badge { background:#4a5568; color:#fff; }
+.search-empty-note { padding:14px; font-size:13px; color:#5c5a56; text-align:center; }
+.player-highlight-banner { border:2px solid #202020; background:#fff4ea; padding:8px 14px; margin-top:8px; display:flex; align-items:center; justify-content:space-between; font-size:13px; font-weight:600; width:100%; box-sizing:border-box; }
+.player-highlight-banner strong { color:#bf5700; font-weight:800; }
+.player-highlight-banner .btn-unhighlight { background:#202020; color:#fff; border:0; padding:4px 10px; font-size:12px; font-weight:800; cursor:pointer; text-transform:uppercase; }
+.player-highlight-banner .btn-unhighlight:hover { background:#bf5700; }
+.player-card.card-highlighted { border:3px solid #bf5700; background:#fff8f0; box-shadow:4px 4px 0 #bf5700; }
+@media(max-width:680px) { .navbar { margin-top:14px; } .brand-logo { width:60px; height:54px; } .pos-selector-nav { width:100%; justify-content:space-between; } .metrics-container { grid-template-columns:repeat(2,minmax(0,1fr)); } .metric-card { padding:12px; } .metric-title { font-size:11px; } .panel { box-shadow:5px 5px 0 #202020; } .control-group { flex:1 1 140px; } select.control-select { width:100%; } .player-search-box { width:100%; } .player-search-dropdown { width:100%; } .year-filter-btn { width:100%; } .year-filter-panel { width:100%; } .panel-heading span { display:none; } .cards-grid { grid-template-columns:minmax(0,1fr); } #plot { height:420px; } }
 @media(prefers-reduced-motion:reduce) { * { transition:none!important; } }
+

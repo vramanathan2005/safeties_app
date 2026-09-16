@@ -772,6 +772,14 @@ def build_html():
         <div class="panel">
             <div class="panel-heading"><h3>Athletic profile</h3><span>Explore measurables · Select players on the chart</span></div>
             <div class="controls-row">
+                <div class="control-group player-search-group">
+                    <label for="player-search-input">Search Recruit / Player</label>
+                    <div class="player-search-box">
+                        <input type="text" id="player-search-input" class="player-search-input" placeholder="Search recruit or player…" autocomplete="off">
+                        <button type="button" id="player-search-clear" class="search-clear-btn" title="Clear search">&times;</button>
+                    </div>
+                    <div id="player-search-dropdown" class="player-search-dropdown" hidden></div>
+                </div>
                 <div class="control-group year-filter-group">
                     <label for="year-filter-btn">HS graduation year</label>
                     <button type="button" id="year-filter-btn" class="control-select year-filter-btn" aria-haspopup="true" aria-expanded="false"></button>
@@ -810,6 +818,14 @@ def build_html():
                 <div class="hint-text">
                     <i id="dynamic-hint">Use the dropdowns to explore data. Filter by selecting regions on the chart.</i>
                 </div>
+            </div>
+            <div id="player-highlight-banner" class="player-highlight-banner" style="display:none;">
+                <div id="player-highlight-info" style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                    <span id="player-highlight-name" style="font-weight:800; font-size:14px; color:#202020;"></span>
+                    <span id="player-highlight-meta" style="color:#5c5a56; font-size:13px;"></span>
+                    <span id="player-highlight-status" style="font-size:12px; font-weight:700;"></span>
+                </div>
+                <button type="button" id="btn-clear-highlight" class="btn-unhighlight">Clear Highlight</button>
             </div>
             <div id="plot"></div>
         </div>
@@ -996,6 +1012,16 @@ def build_html():
         const toggleRecruits = document.getElementById('toggle-recruits');
         const toggleBoardOnly = document.getElementById('toggle-board-only');
         
+        let highlightedPlayer = null;
+        const playerSearchInput = document.getElementById('player-search-input');
+        const playerSearchClear = document.getElementById('player-search-clear');
+        const playerSearchDropdown = document.getElementById('player-search-dropdown');
+        const highlightBanner = document.getElementById('player-highlight-banner');
+        const highlightName = document.getElementById('player-highlight-name');
+        const highlightMeta = document.getElementById('player-highlight-meta');
+        const highlightStatus = document.getElementById('player-highlight-status');
+        const btnClearHighlight = document.getElementById('btn-clear-highlight');
+
         Object.keys(posData).forEach(code => {{
             const opt = document.createElement('option');
             opt.value = code;
@@ -1221,14 +1247,30 @@ def build_html():
                 return;
             }}
 
+            if (highlightedPlayer) {{
+                const hpKey = highlightedPlayer.player_id != null ? highlightedPlayer.player_id : (highlightedPlayer.NAME + '|' + (highlightedPlayer.SCHOOL || ''));
+                const hpIdx = data.findIndex(p => (p.player_id != null ? p.player_id : (p.NAME + '|' + (p.SCHOOL || ''))) === hpKey);
+                if (hpIdx > 0) {{
+                    data = [data[hpIdx], ...data.slice(0, hpIdx), ...data.slice(hpIdx + 1)];
+                }} else if (hpIdx === -1 && (!highlightedPlayer.posCode || highlightedPlayer.posCode === currentPos)) {{
+                    data = [highlightedPlayer, ...data];
+                }}
+            }}
+
             const activePosMetrics = getActiveMetrics();
 
             const visibleCards = data.slice(offset, offset + 100);
             visibleCards.forEach(p => {{
                 const card = document.createElement('div');
                 card.className = 'player-card';
+                const isHp = highlightedPlayer && (
+                    (highlightedPlayer.player_id != null && p.player_id != null && highlightedPlayer.player_id === p.player_id) ||
+                    (p.NAME === highlightedPlayer.NAME && (p.SCHOOL || '') === (highlightedPlayer.SCHOOL || ''))
+                );
+                if (isHp) card.classList.add('card-highlighted');
+
                 const tagClass = p.is_recruit ? 'tag-recruit' : 'tag-nfl';
-                const tagText = p.career_outcome || 'Outcome unverified';
+                const tagText = isHp ? '★ SEARCHED ' + (p.is_recruit ? 'RECRUIT' : 'PLAYER') : (p.career_outcome || 'Outcome unverified');
                 const draftInfo = p.is_recruit ? (p.class_field ? `HS class ${{p.class_field}}` : 'HS class unknown') : (p.ROUND ? `Round ${{p.ROUND}}` : 'Draft status unverified');
 
                 let metricsHtml = '';
@@ -1280,6 +1322,8 @@ def build_html():
             
             document.getElementById('y-group').style.display = isHist ? 'none' : 'flex';
             
+            updateHighlightBanner();
+
             const all = getFilteredPlayers();
             let players = applyChartFilters(all);
 
@@ -1396,12 +1440,17 @@ def build_html():
                 }}
 
                 const layout = {{
-                    title: `DISTRIBUTION OF ${{metricDefs[xField].label.toUpperCase()}}`,
+                    title: {{
+                        text: `DISTRIBUTION OF ${{metricDefs[xField].label.toUpperCase()}}`,
+                        x: 0.02,
+                        xanchor: 'left',
+                        font: {{ family: 'Arial, sans-serif', size: 13, color: '#202020', weight: 'bold' }}
+                    }},
                     xaxis: axisConfig(xField),
                     yaxis: yaxisCfg,
                     barmode: 'overlay',
                     dragmode: 'select',
-                    margin: {{ t: 50 }},
+                    margin: {{ t: 55 }},
                     plot_bgcolor: 'white', paper_bgcolor: 'white', font: {{ family: 'Arial, sans-serif', color: '#706B64', size: 12 }},
                     shapes: [
                         {{ type: 'line', x0: p50,  x1: p50,  y0: 0, y1: 1, yref: 'paper', line: {{ color: '#4A5568', dash: 'dash', width: 2 }} }},
@@ -1433,7 +1482,59 @@ def build_html():
                 if (!draftedVals.length) {{ layout.shapes = []; layout.annotations = []; }}
                 if (isSpeed) layout.xaxis.autorange = 'reversed';
 
-                
+                const hp = highlightedPlayer;
+                const hpHasX = hp && hp[xField] != null && !isNaN(hp[xField]);
+                if (hp && hpHasX) {{
+                    const hpX = hp[xField];
+                    layout.shapes = layout.shapes || [];
+                    layout.shapes.push({{
+                        type: 'line',
+                        x0: hpX,
+                        x1: hpX,
+                        y0: 0,
+                        y1: 1,
+                        yref: 'paper',
+                        line: {{ color: '#BF5700', width: 3.5, dash: 'solid' }}
+                    }});
+
+                    let annotY = 0.88;
+                    if (Math.abs(hpX - p50) < (binSpec ? binSpec.size * 1.2 : 3)) {{
+                        annotY = 0.74;
+                    }}
+
+                    layout.annotations = layout.annotations || [];
+                    layout.annotations.push({{
+                        x: hpX,
+                        y: annotY,
+                        yref: 'paper',
+                        xanchor: 'center',
+                        yanchor: 'middle',
+                        text: `★ <b>${{escapeText(hp.NAME)}}</b><br><span style="font-size:12px; font-weight:800;">${{formatVal(hpX, xField)}}</span>`,
+                        showarrow: false,
+                        bgcolor: '#BF5700',
+                        bordercolor: '#202020',
+                        borderwidth: 2,
+                        borderpad: 6,
+                        font: {{ family: 'Arial, sans-serif', size: 12, color: '#FFFFFF' }}
+                    }});
+                }}
+
+                if (hp && hp.is_recruit && recruits.length && !useRecruitHistogram) {{
+                    const hpRecruit = recruits.find(r => r.NAME === hp.NAME && (r.player_id == null || r.player_id === hp.player_id));
+                    if (hpRecruit && hpRecruit._jitterSlot !== undefined) {{
+                        traces.push({{
+                            x: [hpRecruit[xField]],
+                            y: [0.5 + hpRecruit._jitterSlot * 0.8],
+                            mode: 'markers',
+                            type: 'scatter',
+                            name: hp.NAME,
+                            hoverinfo: 'none',
+                            marker: {{ color: '#FFD700', size: 18, symbol: 'star', line: {{ width: 2, color: '#202020' }} }},
+                            showlegend: false
+                        }});
+                    }}
+                }}
+
                 Plotly.newPlot('plot', traces, layout, {{ displaylogo: false }});
                 traceDataMap[0] = drafted;
                 if (recruits.length && !useRecruitHistogram) traceDataMap[1] = recruits;
@@ -1501,6 +1602,8 @@ def build_html():
                     unselected: {{ marker: {{ opacity: 0.2 }} }}
                 }};
 
+                const traces = [trace];
+
                 const layout = {{
                     title: `${{metricDefs[yField].label.toUpperCase()}} VS ${{metricDefs[xField].label.toUpperCase()}}`,
                     xaxis: axisConfig(xField),
@@ -1508,7 +1611,8 @@ def build_html():
                     dragmode: 'select',
                     margin: {{ t: 60 }},
                     hovermode: 'closest',
-                    plot_bgcolor: 'white', paper_bgcolor: 'white', font: {{ family: 'Arial, sans-serif', color: '#706B64', size: 12 }}
+                    plot_bgcolor: 'white', paper_bgcolor: 'white', font: {{ family: 'Arial, sans-serif', color: '#706B64', size: 12 }},
+                    annotations: []
                 }};
 
                 if (metricDefs[xField] && metricDefs[xField].unit === 's') {{
@@ -1518,7 +1622,70 @@ def build_html():
                     layout.yaxis.autorange = 'reversed';
                 }}
 
-                Plotly.newPlot('plot', [trace], layout, {{ displaylogo: false }});
+                const hp = highlightedPlayer;
+                const hpHasX = hp && hp[xField] != null && !isNaN(hp[xField]);
+                const hpHasY = hp && hp[yField] != null && !isNaN(hp[yField]);
+
+                if (hp && hpHasX && hpHasY) {{
+                    const hpX = hp[xField];
+                    const hpY = hp[yField];
+
+                    // Outer glowing halo
+                    traces.push({{
+                        x: [hpX],
+                        y: [hpY],
+                        mode: 'markers',
+                        type: 'scatter',
+                        hoverinfo: 'none',
+                        marker: {{
+                            size: 34,
+                            color: 'rgba(191, 87, 0, 0.25)',
+                            symbol: 'circle',
+                            line: {{ width: 2.5, color: '#BF5700' }}
+                        }},
+                        showlegend: false
+                    }});
+
+                    // Star highlight marker
+                    traces.push({{
+                        x: [hpX],
+                        y: [hpY],
+                        mode: 'markers',
+                        type: 'scatter',
+                        name: hp.NAME,
+                        hoverinfo: 'text',
+                        text: [`<b>${{escapeText(hp.NAME)}}</b><br>${{escapeText(hp.SCHOOL || '')}}<br>${{metricDefs[xField].label}}: ${{formatVal(hpX, xField)}}<br>${{metricDefs[yField].label}}: ${{formatVal(hpY, yField)}}`],
+                        marker: {{
+                            size: 20,
+                            color: '#FFD700',
+                            symbol: 'star',
+                            line: {{ width: 2.5, color: '#202020' }}
+                        }},
+                        showlegend: false
+                    }});
+
+                    layout.annotations.push({{
+                        x: hpX,
+                        y: hpY,
+                        xref: 'x',
+                        yref: 'y',
+                        text: `★ <b>${{escapeText(hp.NAME)}}</b><br>${{metricDefs[xField].label}}: ${{formatVal(hpX, xField)}} | ${{metricDefs[yField].label}}: ${{formatVal(hpY, yField)}}`,
+                        showarrow: true,
+                        arrowhead: 2,
+                        arrowsize: 1.2,
+                        arrowwidth: 2.5,
+                        arrowcolor: '#BF5700',
+                        ax: 0,
+                        ay: -45,
+                        bgcolor: '#FFFFFF',
+                        bordercolor: '#202020',
+                        borderwidth: 2,
+                        borderpad: 6,
+                        font: {{ family: 'Arial, sans-serif', size: 12, color: '#202020', weight: 'bold' }}
+                    }});
+                }}
+
+                Plotly.newPlot('plot', traces, layout, {{ displaylogo: false }});
                 traceDataMap[0] = valid;
                 
                 // Show ALL players for the position by default in the list
@@ -1620,6 +1787,22 @@ def build_html():
                         marker: {{ color: '#BF5700', size: 12, symbol: 'diamond' }}
                     }});
                     maxRecruitY2 = 0.5 + Math.max(...recruits.map(p => p._jitterSlot || 0)) * 0.8;
+                }}
+
+                if (hp && hp.is_recruit && recruits.length && !redrawUseRecruitHistogram) {{
+                    const hpRecruit = recruits.find(r => r.NAME === hp.NAME && (r.player_id == null || r.player_id === hp.player_id));
+                    if (hpRecruit && hpRecruit._jitterSlot !== undefined) {{
+                        traces.push({{
+                            x: [hpRecruit[xField]],
+                            y: [0.5 + (hpRecruit._jitterSlot || 0) * 0.8],
+                            mode: 'markers',
+                            type: 'scatter',
+                            name: hp.NAME,
+                            hoverinfo: 'none',
+                            marker: {{ color: '#FFD700', size: 18, symbol: 'star', line: {{ width: 2, color: '#202020' }} }},
+                            showlegend: false
+                        }});
+                    }}
                 }}
 
                 const yMax2 = Math.max(...counts, 1);
@@ -1733,6 +1916,302 @@ def build_html():
                 document.getElementById('clear-selection').style.display = 'block';
             }});
         }}
+
+        function updateHighlightBanner() {{
+            if (!highlightedPlayer) {{
+                highlightBanner.style.display = 'none';
+                return;
+            }}
+            const p = highlightedPlayer;
+            highlightBanner.style.display = 'flex';
+            highlightName.textContent = `★ ${{p.NAME}}`;
+            const typeStr = p.is_recruit ? (p.class_field ? `HS Class ${{p.class_field}} Recruit` : 'HS Recruit') : (p.ROUND ? `NFL Draft Rd ${{p.ROUND}} (${{p.YEAR || ''}})` : (p.TEAM || 'NFL Drafted'));
+            highlightMeta.textContent = `${{p.SCHOOL || 'School unknown'}} • ${{typeStr}} • Position: ${{((p.position_played || currentPos) || '').toUpperCase()}}`;
+
+            const mode = chartType.value;
+            const xField = xSelect.value;
+            const yField = ySelect.value;
+            const defX = metricDefs[xField];
+            const defY = metricDefs[yField];
+
+            if (mode === 'scatter') {{
+                const hasX = p[xField] != null && !isNaN(p[xField]);
+                const hasY = p[yField] != null && !isNaN(p[yField]);
+                if (hasX && hasY) {{
+                    highlightStatus.innerHTML = `<span style="color:#202020;">${{defX ? defX.label : xField}}: <b>${{formatVal(p[xField], xField)}}</b> &nbsp;|&nbsp; ${{defY ? defY.label : yField}}: <b>${{formatVal(p[yField], yField)}}</b></span>`;
+                }} else if (!hasX && !hasY) {{
+                    highlightStatus.innerHTML = `<span style="color:#c53030;">⚠️ Missing ${{defX ? defX.label : xField}} and ${{defY ? defY.label : yField}} data</span>`;
+                }} else if (!hasX) {{
+                    highlightStatus.innerHTML = `<span style="color:#c53030;">⚠️ Missing ${{defX ? defX.label : xField}} data (${{defY ? defY.label : yField}}: <b>${{formatVal(p[yField], yField)}}</b>)</span>`;
+                }} else {{
+                    highlightStatus.innerHTML = `<span style="color:#c53030;">⚠️ Missing ${{defY ? defY.label : yField}} data (${{defX ? defX.label : xField}}: <b>${{formatVal(p[xField], xField)}}</b>)</span>`;
+                }}
+            }} else {{
+                const hasX = p[xField] != null && !isNaN(p[xField]);
+                if (hasX) {{
+                    highlightStatus.innerHTML = `<span style="color:#202020;">${{defX ? defX.label : xField}}: <b>${{formatVal(p[xField], xField)}}</b></span>`;
+                }} else {{
+                    highlightStatus.innerHTML = `<span style="color:#c53030;">⚠️ Missing ${{defX ? defX.label : xField}} data for this histogram</span>`;
+                }}
+            }}
+        }}
+
+        function highlightMatches(text, query) {{
+            if (!text) return '';
+            const safeText = escapeText(text);
+            if (!query) return safeText;
+            const qLower = query.toLowerCase();
+            const tLower = safeText.toLowerCase();
+            const idx = tLower.indexOf(qLower);
+            if (idx === -1) return safeText;
+            return safeText.substring(0, idx) + '<mark>' + safeText.substring(idx, idx + query.length) + '</mark>' + safeText.substring(idx + query.length);
+        }}
+
+        let activeDropdownIndex = -1;
+        let currentSearchResults = [];
+
+        function updateDropdownActiveItem() {{
+            const items = playerSearchDropdown.querySelectorAll('.search-result-item');
+            items.forEach((item, i) => {{
+                if (i === activeDropdownIndex) {{
+                    item.classList.add('selected');
+                    item.scrollIntoView({{ block: 'nearest' }});
+                }} else {{
+                    item.classList.remove('selected');
+                }}
+            }});
+        }}
+
+        function handlePlayerSearch() {{
+            const query = playerSearchInput.value.trim().toLowerCase();
+            activeDropdownIndex = -1;
+            currentSearchResults = [];
+
+            if (query.length < 2) {{
+                playerSearchDropdown.hidden = true;
+                playerSearchDropdown.innerHTML = '';
+                playerSearchClear.style.display = highlightedPlayer ? 'block' : 'none';
+                return;
+            }}
+            playerSearchClear.style.display = 'block';
+
+            // Current position matches
+            const currentList = posData[currentPos] ? (posData[currentPos].players || []) : [];
+            const currentMatches = [];
+            currentList.forEach(p => {{
+                if (p && p.NAME && p.NAME.toLowerCase().includes(query)) {{
+                    currentMatches.push({{ player: p, posCode: currentPos, posName: posData[currentPos].name }});
+                }}
+            }});
+
+            // Other position matches
+            const otherMatches = [];
+            const seen = new Set(currentMatches.map(m => m.player.player_id != null ? m.player.player_id : (m.player.NAME + '|' + (m.player.SCHOOL || ''))));
+            Object.entries(posData).forEach(([code, group]) => {{
+                if (code === currentPos || code === 'all') return;
+                (group.players || []).forEach(p => {{
+                    if (!p || !p.NAME) return;
+                    const key = p.player_id != null ? p.player_id : (p.NAME + '|' + (p.SCHOOL || ''));
+                    if (seen.has(key)) return;
+                    if (p.NAME.toLowerCase().includes(query)) {{
+                        seen.add(key);
+                        otherMatches.push({{ player: p, posCode: code, posName: group.name }});
+                    }}
+                }});
+            }});
+
+            // Scoring helper: Recruits score higher (per user request: "scatter plot is mainly supposed to be for searching up a recruit")
+            function scoreMatch(m) {{
+                const nameLower = m.player.NAME.toLowerCase();
+                let score = 0;
+                if (nameLower.startsWith(query)) score += 50;
+                const parts = nameLower.split(' ');
+                if (parts.some(part => part.startsWith(query))) score += 30;
+                if (m.player.is_recruit) score += 25;
+                if (m.posCode === currentPos) score += 10;
+                return score;
+            }}
+
+            currentMatches.sort((a, b) => scoreMatch(b) - scoreMatch(a));
+            otherMatches.sort((a, b) => scoreMatch(b) - scoreMatch(a));
+
+            const combined = [];
+            if (currentMatches.length) {{
+                combined.push({{ isHeader: true, title: `${{posData[currentPos].name}} (${{currentMatches.length}})` }});
+                currentMatches.slice(0, 10).forEach(m => combined.push(m));
+            }}
+            if (otherMatches.length) {{
+                combined.push({{ isHeader: true, title: `Other Positions (${{otherMatches.length}})` }});
+                otherMatches.slice(0, 10).forEach(m => combined.push(m));
+            }}
+
+            currentSearchResults = combined.filter(c => !c.isHeader);
+
+            if (!combined.length) {{
+                playerSearchDropdown.innerHTML = '<div class="search-empty-note">No recruits or players found matching "<b>' + escapeText(query) + '</b>"</div>';
+                playerSearchDropdown.hidden = false;
+                return;
+            }}
+
+            playerSearchDropdown.innerHTML = '';
+            let itemIdx = 0;
+            combined.forEach(item => {{
+                if (item.isHeader) {{
+                    const h = document.createElement('div');
+                    h.className = 'search-result-group-title';
+                    h.textContent = item.title;
+                    playerSearchDropdown.appendChild(h);
+                }} else {{
+                    const p = item.player;
+                    const row = document.createElement('div');
+                    row.className = 'search-result-item';
+                    row.dataset.resultIdx = itemIdx++;
+
+                    const main = document.createElement('div');
+                    main.className = 'search-result-main';
+                    
+                    const nameEl = document.createElement('div');
+                    nameEl.className = 'search-result-name';
+                    nameEl.innerHTML = highlightMatches(p.NAME, query);
+                    
+                    const subEl = document.createElement('div');
+                    subEl.className = 'search-result-sub';
+                    const draftOrClass = p.is_recruit 
+                        ? (p.class_field ? `HS class ${{p.class_field}}` : 'HS Recruit')
+                        : (p.ROUND ? `NFL Rd ${{p.ROUND}} (${{p.YEAR || ''}})` : (p.TEAM || 'NFL Drafted'));
+                    subEl.textContent = `${{p.SCHOOL || 'Unknown School'}} • ${{draftOrClass}}`;
+
+                    main.appendChild(nameEl);
+                    main.appendChild(subEl);
+
+                    const badges = document.createElement('div');
+                    badges.className = 'search-result-badges';
+
+                    const posBadge = document.createElement('span');
+                    posBadge.className = 'search-badge-pos';
+                    posBadge.textContent = (p.position_played || item.posCode).toUpperCase();
+                    badges.appendChild(posBadge);
+
+                    const typeBadge = document.createElement('span');
+                    typeBadge.className = 'search-badge-tag ' + (p.is_recruit ? 'tag-recruit-badge' : 'tag-nfl-badge');
+                    typeBadge.textContent = p.is_recruit ? 'Recruit' : 'Draft';
+                    badges.appendChild(typeBadge);
+
+                    row.appendChild(main);
+                    row.appendChild(badges);
+
+                    row.addEventListener('click', () => {{
+                        selectPlayer(p, item.posCode);
+                    }});
+
+                    playerSearchDropdown.appendChild(row);
+                }}
+            }});
+
+            playerSearchDropdown.hidden = false;
+        }}
+
+        function selectPlayer(p, posCode) {{
+            if (!p) return;
+            highlightedPlayer = p;
+            playerSearchInput.value = p.NAME;
+            playerSearchDropdown.hidden = true;
+            playerSearchClear.style.display = 'block';
+
+            // If player belongs to a different position group, switch to it
+            if (posCode && posCode !== currentPos) {{
+                currentPos = posCode;
+                posSelect.value = posCode;
+                updateSelectors();
+                updateTopMetrics();
+                if (!yearPanel.hidden) renderYearPanel();
+            }}
+
+            // If recruit and recruit filters would hide them, automatically enable!
+            if (p.is_recruit) {{
+                if (!toggleRecruits.checked) {{
+                    toggleRecruits.checked = true;
+                }}
+                if (p.class_field && !selectedYears.has(p.class_field)) {{
+                    selectedYears.add(p.class_field);
+                    updateYearButtonLabel();
+                }}
+                if (toggleBoardOnly.checked && !p.on_board) {{
+                    toggleBoardOnly.checked = false;
+                }}
+            }}
+
+            updateHighlightBanner();
+            drawPlot();
+            renderCards(getFilteredPlayers());
+
+            setTimeout(() => {{
+                const card = document.querySelector('.player-card.card-highlighted');
+                if (card) {{
+                    card.scrollIntoView({{ behavior: 'smooth', block: 'nearest' }});
+                }}
+            }}, 150);
+        }}
+
+        function clearHighlightedPlayer() {{
+            highlightedPlayer = null;
+            playerSearchInput.value = '';
+            playerSearchClear.style.display = 'none';
+            playerSearchDropdown.hidden = true;
+            updateHighlightBanner();
+            drawPlot();
+            renderCards(getFilteredPlayers());
+        }}
+
+        let searchDebounceTimer = null;
+        playerSearchInput.addEventListener('input', () => {{
+            clearTimeout(searchDebounceTimer);
+            searchDebounceTimer = setTimeout(handlePlayerSearch, 120);
+        }});
+        playerSearchInput.addEventListener('focus', () => {{
+            if (playerSearchInput.value.trim().length >= 2) handlePlayerSearch();
+        }});
+        playerSearchInput.addEventListener('keydown', (e) => {{
+            const items = playerSearchDropdown.querySelectorAll('.search-result-item');
+            if (e.key === 'ArrowDown') {{
+                e.preventDefault();
+                if (playerSearchDropdown.hidden) {{
+                    if (playerSearchInput.value.trim().length >= 2) handlePlayerSearch();
+                    return;
+                }}
+                if (items.length > 0) {{
+                    activeDropdownIndex = (activeDropdownIndex + 1) % items.length;
+                    updateDropdownActiveItem();
+                }}
+            }} else if (e.key === 'ArrowUp') {{
+                e.preventDefault();
+                if (items.length > 0) {{
+                    activeDropdownIndex = (activeDropdownIndex - 1 + items.length) % items.length;
+                    updateDropdownActiveItem();
+                }}
+            }} else if (e.key === 'Enter') {{
+                e.preventDefault();
+                if (!playerSearchDropdown.hidden && currentSearchResults.length > 0) {{
+                    const chosenIdx = activeDropdownIndex >= 0 ? activeDropdownIndex : 0;
+                    const match = currentSearchResults[chosenIdx];
+                    if (match) selectPlayer(match.player, match.posCode);
+                }}
+            }} else if (e.key === 'Escape') {{
+                playerSearchDropdown.hidden = true;
+            }}
+        }});
+
+        playerSearchClear.onclick = () => {{
+            clearHighlightedPlayer();
+            playerSearchInput.focus();
+        }};
+        btnClearHighlight.onclick = clearHighlightedPlayer;
+
+        document.addEventListener('click', (e) => {{
+            if (!playerSearchDropdown.hidden && !playerSearchDropdown.contains(e.target) && e.target !== playerSearchInput) {{
+                playerSearchDropdown.hidden = true;
+            }}
+        }});
 
         function init() {{
             updateSelectors();
