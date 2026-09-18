@@ -492,6 +492,7 @@ def build_html():
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Texas Football</title>
+    <script>if(window.self!==window.top){{document.documentElement.classList.add('embedded');}}</script>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
@@ -1313,6 +1314,8 @@ def build_html():
         }}
 
         let traceDataMap = {{}};
+        let histSelections = [];
+        let histBinSpec = null;
 
         function drawPlot() {{
             const mode = chartType.value;
@@ -1340,6 +1343,7 @@ def build_html():
                 const recruits = valid.filter(p => p.is_recruit);
                 const draftedX = drafted.map(p => p[xField]);
                 const binSpec = histogramBins(xField, draftedX);
+                histBinSpec = binSpec;
                 
                 const histTrace = {{
                     x: draftedX,
@@ -1694,10 +1698,6 @@ def build_html():
 
             const plotDiv = document.getElementById('plot');
 
-            // Track current selection ranges for redraw
-            let histSelections = [];
-            let histBinSpec = null;
-
             function getHistBinSpec() {{
                 if (histBinSpec) return histBinSpec;
                 const rendered = plotDiv._fullData && plotDiv._fullData[0];
@@ -1789,6 +1789,7 @@ def build_html():
                     maxRecruitY2 = 0.5 + Math.max(...recruits.map(p => p._jitterSlot || 0)) * 0.8;
                 }}
 
+                const hp = highlightedPlayer;
                 if (hp && hp.is_recruit && recruits.length && !redrawUseRecruitHistogram) {{
                     const hpRecruit = recruits.find(r => r.NAME === hp.NAME && (r.player_id == null || r.player_id === hp.player_id));
                     if (hpRecruit && hpRecruit._jitterSlot !== undefined) {{
@@ -2219,21 +2220,28 @@ def build_html():
             drawPlot();
         }}
 
+        function resetHistFilter() {{
+            histSelections = [];
+            const clearBtn = document.getElementById('clear-selection');
+            if (clearBtn) clearBtn.style.display = 'none';
+        }}
+
         posSelect.onchange = () => {{
             currentPos = posSelect.value;
+            resetHistFilter();
             if (!yearPanel.hidden) renderYearPanel();
             init();
         }};
         
-        xSelect.onchange = drawPlot;
+        xSelect.onchange = () => {{ resetHistFilter(); drawPlot(); }};
         ySelect.onchange = drawPlot;
-        chartType.onchange = drawPlot;
+        chartType.onchange = () => {{ resetHistFilter(); drawPlot(); }};
         toggleRecruits.onchange = drawPlot;
         toggleBoardOnly.onchange = drawPlot;
         
         document.getElementById('clear-selection').onclick = () => {{
+            resetHistFilter();
             Plotly.restyle('plot', 'selectedpoints', null);
-            document.getElementById('clear-selection').style.display = 'none';
             drawPlot();
         }};
 
