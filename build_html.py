@@ -43,6 +43,184 @@ POSITIONS = {
     'dt': {'name': 'Defensive Tackle', 'recruit_match': ['DT']}
 }
 
+
+def standardize_measurables(df):
+    """Standardize all track & field and jump measurables to inches,
+    converting feet-and-decimals from combine CSVs and fixing known outliers."""
+    if df.empty:
+        return df
+
+    # Height: decode 4-digit scouting format (e.g. 6036 -> 6' 3 6/8" = 75.75)
+    if 'HT' in df.columns:
+        def fix_ht(val):
+            if pd.isna(val): return val
+            try:
+                v = float(val)
+                if v >= 1000:
+                    ft = int(v // 1000)
+                    rem = v % 1000
+                    inch = int(rem // 10)
+                    eighths = rem % 10
+                    return round(ft * 12 + inch + eighths / 8.0, 2)
+                return v
+            except: return val
+        df['HT'] = df['HT'].apply(fix_ht)
+
+    # Long Jump: combine files have feet (15-25 ft), recruits have inches (113-300 in).
+    if 'LJ' in df.columns:
+        def fix_lj(val):
+            if pd.isna(val): return val
+            try:
+                v = float(val)
+                if 0 < v < 50:
+                    return round(v * 12.0, 2)
+                elif v > 1000:
+                    return round(v / 10.0, 2)
+                return v
+            except: return val
+        df['LJ'] = df['LJ'].apply(fix_lj)
+
+    # Triple Jump: combine files have feet (30-50 ft). Convert to inches.
+    if 'TJ' in df.columns:
+        def fix_tj(val):
+            if pd.isna(val): return val
+            try:
+                v = float(val)
+                if 0 < v < 60:
+                    return round(v * 12.0, 2)
+                return v
+            except: return val
+        df['TJ'] = df['TJ'].apply(fix_tj)
+
+    # High Jump: combine files have feet (4.5-7 ft), recruits have inches (53-78 in).
+    if 'HJ' in df.columns:
+        def fix_hj(val):
+            if pd.isna(val): return val
+            try:
+                v = float(val)
+                if 0 < v < 15:
+                    return round(v * 12.0, 2)
+                elif 500 <= v < 700:
+                    ft = int(v // 100)
+                    inch = int(v % 100)
+                    return float(ft * 12 + inch)
+                return v
+            except: return val
+        df['HJ'] = df['HJ'].apply(fix_hj)
+
+    # Shot Put: combine files have feet (25-70 ft), recruits have inches (200-750 in).
+    if 'SHOT' in df.columns:
+        def fix_shot(val):
+            if pd.isna(val): return val
+            try:
+                v = float(val)
+                if 0 < v < 100:
+                    return round(v * 12.0, 2)
+                return v
+            except: return val
+        df['SHOT'] = df['SHOT'].apply(fix_shot)
+
+    # Discus: combine files have feet (60-200 ft), recruits have inches (600-2200 in).
+    if 'DISCUS' in df.columns:
+        def fix_discus(val):
+            if pd.isna(val): return val
+            try:
+                v = float(val)
+                if 0 < v < 250:
+                    return round(v * 12.0, 2)
+                return v
+            except: return val
+        df['DISCUS'] = df['DISCUS'].apply(fix_discus)
+
+    # Javelin: combine files have feet (70-200 ft). Convert to inches.
+    if 'JAVELIN' in df.columns:
+        def fix_jav(val):
+            if pd.isna(val): return val
+            try:
+                v = float(val)
+                if 0 < v < 250:
+                    return round(v * 12.0, 2)
+                return v
+            except: return val
+        df['JAVELIN'] = df['JAVELIN'].apply(fix_jav)
+
+    # Vertical: fix impossible outliers (> 50 in)
+    if 'VERT' in df.columns:
+        def fix_vert(val):
+            if pd.isna(val): return val
+            try:
+                v = float(val)
+                if v > 100:
+                    return round(v / 10.0, 1)
+                return v
+            except: return val
+        df['VERT'] = df['VERT'].apply(fix_vert)
+
+    return df
+
+
+def standardize_player_dict(p):
+    ht = p.get('HT')
+    if ht is not None:
+        try:
+            v = float(ht)
+            if v >= 1000:
+                p['HT'] = round(int(v // 1000) * 12 + int((v % 1000) // 10) + (v % 10) / 8.0, 2)
+        except: pass
+    lj = p.get('LJ')
+    if lj is not None:
+        try:
+            v = float(lj)
+            if 0 < v < 50:
+                p['LJ'] = round(v * 12.0, 2)
+            elif v > 1000:
+                p['LJ'] = round(v / 10.0, 2)
+        except: pass
+    tj = p.get('TJ')
+    if tj is not None:
+        try:
+            v = float(tj)
+            if 0 < v < 60:
+                p['TJ'] = round(v * 12.0, 2)
+        except: pass
+    hj = p.get('HJ')
+    if hj is not None:
+        try:
+            v = float(hj)
+            if 0 < v < 15:
+                p['HJ'] = round(v * 12.0, 2)
+            elif 500 <= v < 700:
+                p['HJ'] = float(int(v // 100) * 12 + int(v % 100))
+        except: pass
+    shot = p.get('SHOT')
+    if shot is not None:
+        try:
+            v = float(shot)
+            if 0 < v < 100:
+                p['SHOT'] = round(v * 12.0, 2)
+        except: pass
+    disc = p.get('DISCUS')
+    if disc is not None:
+        try:
+            v = float(disc)
+            if 0 < v < 250:
+                p['DISCUS'] = round(v * 12.0, 2)
+        except: pass
+    jav = p.get('JAVELIN')
+    if jav is not None:
+        try:
+            v = float(jav)
+            if 0 < v < 250:
+                p['JAVELIN'] = round(v * 12.0, 2)
+        except: pass
+    vert = p.get('VERT')
+    if vert is not None:
+        try:
+            v = float(vert)
+            if v > 100:
+                p['VERT'] = round(v / 10.0, 1)
+        except: pass
+
 def load_wiki_ucreport_picks(path):
     """Standardize a fetch_wikipedia_ucreport_matches.py (or the older OL-only
     ucreport_pipeline.py --kind ol) output file into the same column shape as the
@@ -73,8 +251,10 @@ def load_wiki_ucreport_picks(path):
     raw['100M'] = pd.to_numeric(raw['track100m'], errors='coerce')
     raw['SHOT'] = pd.to_numeric(raw['trackSP'], errors='coerce')
     raw['LJ'] = pd.to_numeric(raw['trackLJ'], errors='coerce')
-    raw['HJ'] = pd.to_numeric(raw['highJump'], errors='coerce')
+    raw['HJ'] = pd.to_numeric(raw['highJump'], errors='coerce') if 'highJump' in raw.columns else None
+    raw['DISCUS'] = pd.to_numeric(raw['discus'], errors='coerce') if 'discus' in raw.columns else None
     raw['is_recruit'] = False
+    raw = standardize_measurables(raw)
     return raw[raw['NAME'].str.strip().str.len() > 0].copy()
 
 
@@ -162,6 +342,9 @@ def build_html():
         recruit_df['SHUT'] = recruit_df['shuttle']
         recruit_df['SHOT'] = recruit_df['trackSP']
         recruit_df['LJ'] = recruit_df['trackLJ']
+        recruit_df['HJ'] = recruit_df['highJump'] if 'highJump' in recruit_df.columns else None
+        recruit_df['DISCUS'] = recruit_df['discus'] if 'discus' in recruit_df.columns else None
+        recruit_df = standardize_measurables(recruit_df)
 
         def col(name):
             return recruit_df[name] if name in recruit_df.columns else None
@@ -251,6 +434,7 @@ def build_html():
 
             records = df.to_dict(orient='records')
             for row in records:
+                standardize_player_dict(row)
                 for k, v in row.items():
                     if isinstance(v, float) and math.isnan(v):
                         row[k] = None
@@ -272,6 +456,7 @@ def build_html():
         combine_df = combine_df[combine_df['NAME'].astype(str).str.strip().str.len() > 0]
         combine_df = combine_df[~combine_df['NAME'].astype(str).str.contains('AVERAGE|Avg', case=False, na=False)]
         combine_df['NAME'] = combine_df['NAME'].astype(str).str.strip()
+        combine_df = standardize_measurables(combine_df)
         
         # YEAR column is only filled on the first row of each year-group; forward-fill so all rows
         # in a group carry the correct year before we filter to 2022-2025.
@@ -381,6 +566,7 @@ def build_html():
             
         records = df.to_dict(orient='records')
         for row in records:
+            standardize_player_dict(row)
             for k, v in row.items():
                 if isinstance(v, float) and math.isnan(v):
                     row[k] = None
@@ -421,6 +607,10 @@ def build_html():
             pid = player.get('player_id')
             if pid is not None and str(int(pid)) in outcomes:
                 player['career_outcome'] = classify({**outcomes[str(int(pid))], 'class_field': player.get('class_field')})
+
+    for group in position_data.values():
+        for player in group['players']:
+            standardize_player_dict(player)
 
     # Flag recruits who are actually on one of our recruiting boards (data/recruits/<year>_recruits.csv,
     # e.g. 2027_recruits.csv) vs. the much larger pool of every UCReport prospect in that class.
@@ -866,6 +1056,46 @@ def build_html():
             }});
             posData.all.players = combined;
         }}
+        function normalizePlayer(p) {{
+            if (!p) return;
+            if (p.HT != null && !isNaN(p.HT) && p.HT >= 1000) {{
+                const ft = Math.floor(p.HT / 1000);
+                const rem = p.HT % 1000;
+                const inch = Math.floor(rem / 10);
+                const eighths = rem % 10;
+                p.HT = +(ft * 12 + inch + eighths / 8.0).toFixed(2);
+            }}
+            if (p.LJ != null && !isNaN(p.LJ)) {{
+                if (p.LJ > 0 && p.LJ < 50) p.LJ = +(p.LJ * 12).toFixed(2);
+                else if (p.LJ > 1000) p.LJ = +(p.LJ / 10).toFixed(2);
+            }}
+            if (p.TJ != null && !isNaN(p.TJ) && p.TJ > 0 && p.TJ < 60) {{
+                p.TJ = +(p.TJ * 12).toFixed(2);
+            }}
+            if (p.HJ != null && !isNaN(p.HJ)) {{
+                if (p.HJ > 0 && p.HJ < 15) p.HJ = +(p.HJ * 12).toFixed(2);
+                else if (p.HJ >= 500 && p.HJ < 700) {{
+                    p.HJ = Math.floor(p.HJ / 100) * 12 + (p.HJ % 100);
+                }}
+            }}
+            if (p.SHOT != null && !isNaN(p.SHOT) && p.SHOT > 0 && p.SHOT < 100) {{
+                p.SHOT = +(p.SHOT * 12).toFixed(2);
+            }}
+            if (p.DISCUS != null && !isNaN(p.DISCUS) && p.DISCUS > 0 && p.DISCUS < 250) {{
+                p.DISCUS = +(p.DISCUS * 12).toFixed(2);
+            }}
+            if (p.JAVELIN != null && !isNaN(p.JAVELIN) && p.JAVELIN > 0 && p.JAVELIN < 250) {{
+                p.JAVELIN = +(p.JAVELIN * 12).toFixed(2);
+            }}
+            if (p.VERT != null && !isNaN(p.VERT) && p.VERT > 50) {{
+                p.VERT = +(p.VERT / 10).toFixed(1);
+            }}
+        }}
+
+        Object.values(posData).forEach(group => {{
+            (group.players || []).forEach(normalizePlayer);
+        }});
+
         rebuildAllGroup();
         // currentPos is set AFTER options are populated so it matches what the dropdown shows
         let currentPos = '';
@@ -1070,6 +1300,7 @@ def build_html():
                 const resp = await fetch('extra_recruits.json');
                 const extra = await resp.json();
                 Object.entries(extra).forEach(([code, group]) => {{
+                    (group.players || []).forEach(normalizePlayer);
                     if (!posData[code]) posData[code] = {{ name: group.name, players: [] }};
                     posData[code].players = posData[code].players.concat(group.players);
                 }});
@@ -1200,11 +1431,25 @@ def build_html():
         function formatVal(v, key) {{
             if (v === null || v === undefined || isNaN(v)) return "-";
             if (key === 'HT') {{
-                const ft = Math.floor(v / 12);
-                const inch = Math.round(v % 12);
+                const totalInches = Math.round(Number(v) * 10) / 10;
+                let ft = Math.floor(totalInches / 12);
+                let inch = Math.round(totalInches - ft * 12);
+                if (inch === 12) {{ ft += 1; inch = 0; }}
                 return `${{ft}}'${{inch}}"`;
             }}
             const def = metricDefs[key];
+            if (!def) return String(v);
+
+            if (['LJ', 'TJ', 'HJ', 'BROAD'].includes(key)) {{
+                const num = Number(v);
+                const totalInches = Math.round(num * 10) / 10;
+                let ft = Math.floor(totalInches / 12);
+                let inch = Math.round((totalInches - ft * 12) * 10) / 10;
+                if (inch >= 12) {{ ft += 1; inch = 0; }}
+                const inchStr = inch % 1 === 0 ? inch : inch.toFixed(1);
+                return `${{num.toFixed(def.decimals)}} in (${{ft}}' ${{inchStr}}")`;
+            }}
+
             return Number(v).toFixed(def.decimals) + (def.unit ? ' ' + def.unit : '');
         }}
 
@@ -1588,6 +1833,15 @@ def build_html():
                     x: valid.map(p => p[xField]),
                     y: valid.map(p => p[yField]),
                     text: valid.map(p => p.NAME),
+                    customdata: valid.map(p => [
+                        p.SCHOOL || p.TEAM || '',
+                        formatVal(p[xField], xField),
+                        formatVal(p[yField], yField),
+                        p.is_recruit ? (p.class_field ? `HS Class ${{p.class_field}} Recruit` : 'Recruit') : `${{p.YEAR || ''}} Pick #${{p['PICK #'] || 'UDFA'}} • ${{p.TEAM || ''}}`
+                    ]),
+                    hovertemplate: '<b>%{{text}}</b><br>%{{customdata[0]}}<br>%{{customdata[3]}}<br>' +
+                                   `${{metricDefs[xField].label}}: %{{customdata[1]}}<br>` +
+                                   `${{metricDefs[yField].label}}: %{{customdata[2]}}<extra></extra>`,
                     mode: 'markers',
                     type: 'scattergl',
                     marker: {{
