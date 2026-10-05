@@ -25,16 +25,23 @@ def reconcile(groups):
             if len(by_id) != 1:
                 continue
             pid, source = next(iter(by_id.items()))
+            # A drafted player is measured as the high school recruit he was: UCReport's numbers only, never the
+            # draft export's (those mix in later testing), so he compares like for like with today's recruits.
             for field in MEASUREMENTS:
-                if draft.get(field) is None and source.get(field) is not None:
-                    draft[field] = source[field]
+                draft[field] = source.get(field)
             draft['player_id'] = pid
             draft['class_field'] = source['class_field']
-            draft['measurement_source'] = 'Draft export; missing measurements filled from UCReport'
+            draft['measurement_source'] = 'UCReport'
             merged = dict(source)
             merged.update(draft)
             linked[pid] = merged
             remove.add(pid)
+        # Drafted players UCReport never measured keep their draft record but no measurements, so they drop out of
+        # the charts instead of showing numbers from somewhere else.
+        for draft in group['players']:
+            if not draft.get('is_recruit') and draft.get('player_id') is None:
+                for field in MEASUREMENTS:
+                    draft[field] = None
         group['players'] = [p for p in group['players'] if not (p.get('is_recruit') and p.get('player_id') in remove)]
     # Carry the same identity and draft outcome into every other view.
     for group in groups.values():

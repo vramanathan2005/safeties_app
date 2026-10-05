@@ -159,6 +159,26 @@ def standardize_measurables(df):
     return df
 
 
+NFL_TEAMS = [
+    'Arizona Cardinals', 'Atlanta Falcons', 'Baltimore Ravens', 'Buffalo Bills', 'Carolina Panthers', 'Chicago Bears',
+    'Cincinnati Bengals', 'Cleveland Browns', 'Dallas Cowboys', 'Denver Broncos', 'Detroit Lions', 'Green Bay Packers',
+    'Houston Texans', 'Indianapolis Colts', 'Jacksonville Jaguars', 'Kansas City Chiefs', 'Las Vegas Raiders',
+    'Los Angeles Chargers', 'Los Angeles Rams', 'Miami Dolphins', 'Minnesota Vikings', 'New England Patriots',
+    'New Orleans Saints', 'New York Giants', 'New York Jets', 'Philadelphia Eagles', 'Pittsburgh Steelers',
+    'San Francisco 49ers', 'Seattle Seahawks', 'Tampa Bay Buccaneers', 'Tennessee Titans', 'Washington Commanders',
+]
+_NFL_BY_NICKNAME = {team.split()[-1].lower(): team for team in NFL_TEAMS}
+_NFL_TYPOS = {'vikins': 'vikings'}
+
+
+def canonical_nfl_team(name):
+    """'Steelers', 'Pittsburg Steelers', 'Minnesota Vikins' -> the team's full name; None when it isn't an NFL team."""
+    if not isinstance(name, str) or not name.strip() or name.strip().lower() in ('nan', 'undefined'):
+        return None
+    nickname = name.strip().split()[-1].lower()
+    return _NFL_BY_NICKNAME.get(_NFL_TYPOS.get(nickname, nickname))
+
+
 def standardize_player_dict(p):
     ht = p.get('HT')
     if ht is not None:
@@ -625,8 +645,29 @@ def build_html():
             names = board_names_by_year.get(int(year)) if year is not None else None
             player['on_board'] = bool(names) and normalize_name(player.get('NAME')) in names
 
+    # Drafted players: every team under its full name (the draft files mix "Steelers", "Pittsburg Steelers"…), so
+    # each gets its team color, and both pick numbers. The combine files carry the pick within the round as PICK #
+    # and the overall pick under PLAYER (their PICK is just the row's order); the Wikipedia classes carry only the
+    # overall pick, as PICK #.
+    def as_int(value):
+        try:
+            number = float(value)
+            return None if math.isnan(number) else int(number)
+        except (TypeError, ValueError):
+            return None
+    for group in position_data.values():
+        for player in group['players']:
+            if player.get('is_recruit'):
+                continue
+            player['TEAM'] = canonical_nfl_team(player.get('TEAM'))
+            overall = as_int(player.get('PLAYER'))
+            if overall is not None:
+                player['OVERALL'], player['ROUND_PICK'] = overall, as_int(player.get('PICK #'))
+            else:
+                player['OVERALL'], player['ROUND_PICK'] = as_int(player.get('PICK #')), None
+
     # Keep the full source in CSV; ship only fields used by the dashboard.
-    display_fields = {'NAME', 'SCHOOL', 'TEAM', 'YEAR', 'ROUND', 'PICK #', 'is_recruit', 'on_board',
+    display_fields = {'NAME', 'SCHOOL', 'TEAM', 'YEAR', 'ROUND', 'PICK #', 'OVERALL', 'ROUND_PICK', 'is_recruit', 'on_board',
                       'player_id', 'class_field', 'career_outcome', 'HT', 'WT', '40',
                       'VERT', 'BROAD', 'WING', 'ARM', 'HAND', 'SHUT', '100M', 'SHOT',
                       'LJ', 'HJ', 'GP', 'C', 'Att', 'Yds', 'C%', 'Avg', 'Y/G', 'C/G',
@@ -1222,6 +1263,17 @@ def build_html():
             }};
         }}
 
+        // "2024 NFL Draft · Round 6, Pick 17 (193rd overall) · New England Patriots"
+        function ordinal(n) {{ const s = ['th', 'st', 'nd', 'rd'], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); }}
+        function draftLine(p) {{
+            const parts = [`${{p.YEAR || ''}} NFL Draft`.trim()];
+            if (p.ROUND && p.ROUND_PICK) parts.push(`Round ${{p.ROUND}}, Pick ${{p.ROUND_PICK}}${{p.OVERALL ? ` (${{ordinal(p.OVERALL)}} overall)` : ''}}`);
+            else if (p.ROUND && p.OVERALL) parts.push(`Round ${{p.ROUND}} · ${{ordinal(p.OVERALL)}} overall`);
+            else if (p.OVERALL) parts.push(`${{ordinal(p.OVERALL)}} overall`);
+            else parts.push('Undrafted');
+            if (p.TEAM) parts.push(p.TEAM);
+            return parts.join(' · ');
+        }}
         const nflColors = {{
             'Arizona Cardinals': '#97233F', 'Atlanta Falcons': '#A71930', 'Baltimore Ravens': '#241773',
             'Buffalo Bills': '#00338D', 'Carolina Panthers': '#0085CA', 'Chicago Bears': '#0B162A',
@@ -1837,7 +1889,7 @@ def build_html():
                         p.SCHOOL || p.TEAM || '',
                         formatVal(p[xField], xField),
                         formatVal(p[yField], yField),
-                        p.is_recruit ? (p.class_field ? `HS Class ${{p.class_field}} Recruit` : 'Recruit') : `${{p.YEAR || ''}} Pick #${{p['PICK #'] || 'UDFA'}} • ${{p.TEAM || ''}}`
+                        p.is_recruit ? (p.class_field ? `HS Class ${{p.class_field}} Recruit` : 'Recruit') : `${{draftLine(p)}}<br>HS Class of ${{p.class_field || '?'}} · UC Report measurements`
                     ]),
                     hovertemplate: '<b>%{{text}}</b><br>%{{customdata[0]}}<br>%{{customdata[3]}}<br>' +
                                    `${{metricDefs[xField].label}}: %{{customdata[1]}}<br>` +
@@ -1847,12 +1899,12 @@ def build_html():
                     marker: {{
                         size: valid.map(p => {{
                             if (p.is_recruit) return recruitSize;
-                            const pick = p['PICK #'];
+                            const pick = p.OVERALL;
                             if (!pick || isNaN(pick)) return 8;   // UDFA
                             // Linear scale: pick 1 = 28px, pick 252 = 8px
                             return Math.max(8, Math.round(28 - (pick - 1) * (20 / 251)));
                         }}),
-                        color: valid.map(p => p.is_recruit ? '#BF5700' : (nflColors[p.TEAM] || '#BF5700')),
+                        color: valid.map(p => p.is_recruit ? '#BF5700' : (nflColors[p.TEAM] || '#9A948C')),
                         opacity: valid.map(p => p.is_recruit ? baseOpacity : 1),
                         line: {{ width: pointCount > 1000 ? 0 : 1, color: 'white' }}
                     }},
