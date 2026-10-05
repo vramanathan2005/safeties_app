@@ -699,7 +699,9 @@ def build_html():
                 extra_players.append(p)
         group['players'] = default_players
         if extra_players:
-            extra_data[code] = {'name': group['name'], 'players': extra_players}
+            # Blank fields are left out (the page treats a missing field like an empty one): most recruits have no
+            # MaxPreps or college stats, and writing every empty column kept this file over Cloudflare's 25 MB limit.
+            extra_data[code] = {'name': group['name'], 'players': [{k: v for k, v in p.items() if v is not None} for p in extra_players]}
 
     with open(os.path.join(base_path, 'extra_recruits.json'), 'w') as f:
         json.dump(extra_data, f, separators=(',', ':'))
@@ -711,6 +713,10 @@ def build_html():
         # page script) so the payload isn't duplicated.
         position_data['all'] = {'name': 'All prospects'}
 
+    # Blank fields are left out here too (the page treats a missing field like an empty one), which keeps the page small.
+    for group in position_data.values():
+        if 'players' in group:   # ('all' holds no player list of its own)
+            group['players'] = [{k: v for k, v in p.items() if v is not None} for p in group['players']]
     json_data = json.dumps(position_data, separators=(',', ':')).replace('<', r'\u003c')
     
     default_years_js = ','.join(str(y) for y in sorted(DEFAULT_CLASS_YEARS))
