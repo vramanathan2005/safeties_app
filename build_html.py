@@ -198,6 +198,65 @@ def apply_milesplit(df):
     return df
 
 
+# Texas's own measurements (the recruiting staff's measurables sheets, as Tars reads them; scripts/
+# export-texas-measurables.sh in Tars writes the file). The newest Texas number of each kind replaces UC Report's,
+# and TX lists which columns came from Texas so the page writes them in scout notation (6032, 7478).
+TEXAS_MEASURABLES = os.path.expanduser('~/.tars/texas_measurables.json')
+TEXAS_FIELDS = {'ht': 'HT', 'wt': 'WT', 'wing': 'WING', 'arm': 'ARM', 'hand': 'HAND'}
+
+
+def texas_name_key(name):
+    """The same key Tars uses: lowercase, no Jr./III, letters only."""
+    key = re.sub(r'\b(?:jr|sr|ii|iii|iv|v)\b\.?', '', str(name or '').lower())
+    return re.sub(r'\s+', ' ', re.sub(r'[^a-z ]', '', key)).strip()
+
+
+def _school_words(school):
+    stop = {'high', 'school', 'senior', 'middle', 'hs', 'prep', 'academy', 'the', 'of', 'and', 'at'}
+    return {w for w in re.sub(r'[^a-z0-9\s]', ' ', str(school or '').lower()).split() if len(w) > 2 and w not in stop}
+
+
+def apply_texas(df):
+    """Overlay the newest Texas measurement of each kind on recruits matched by name, and class or school."""
+    try:
+        sheet = json.load(open(TEXAS_MEASURABLES))
+    except (OSError, ValueError) as error:
+        print(f"Texas measurables: none ({error}); keeping UC Report's")
+        return df
+    if df.empty:
+        return df
+    df['TX'] = None
+    df['TX_EVENT'] = None
+    matched = 0
+    for idx, row in df.iterrows():
+        entries = sheet.get(texas_name_key(row.get('NAME')), [])
+        if not entries:
+            continue
+        cls = pd.to_numeric(row.get('class_field'), errors='coerce')
+        school = _school_words(row.get('SCHOOL'))
+        def same_player(e):
+            if pd.notna(cls) and e.get('year'):
+                return int(e['year']) == int(cls)
+            theirs = _school_words(e.get('school'))
+            return not school or not theirs or bool(school & theirs)
+        entries = sorted((e for e in entries if same_player(e)), key=lambda e: e.get('date') or '', reverse=True)
+        if not entries:
+            continue
+        fields = []
+        for src, column in TEXAS_FIELDS.items():
+            latest = next((e for e in entries if e.get(src)), None)
+            if latest:
+                df.at[idx, column] = float(latest[src])
+                fields.append(column)
+        if fields:
+            newest = entries[0]
+            df.at[idx, 'TX'] = fields
+            df.at[idx, 'TX_EVENT'] = ' '.join(filter(None, [newest.get('event'), newest.get('date')]))
+            matched += 1
+    print(f"Texas measurables: {matched} recruits")
+    return df
+
+
 NFL_TEAMS = [
     'Arizona Cardinals', 'Atlanta Falcons', 'Baltimore Ravens', 'Buffalo Bills', 'Carolina Panthers', 'Chicago Bears',
     'Cincinnati Bengals', 'Cleveland Browns', 'Dallas Cowboys', 'Denver Broncos', 'Detroit Lions', 'Green Bay Packers',
@@ -406,6 +465,7 @@ def build_html():
         recruit_df['DISCUS'] = recruit_df['discus'] if 'discus' in recruit_df.columns else None
         recruit_df = standardize_measurables(recruit_df)
         recruit_df = apply_milesplit(recruit_df)
+        recruit_df = apply_texas(recruit_df)
 
         def col(name):
             return recruit_df[name] if name in recruit_df.columns else None
@@ -620,7 +680,7 @@ def build_html():
             if not pos_recruits.empty:
                 df = pd.concat([df, pos_recruits], ignore_index=True)
 
-        num_cols = df.columns.difference(['NAME', 'SCHOOL', 'TEAM', 'is_recruit', 'YEAR', 'PLAYER', 'PICK', 'PICK #', 'maxpreps_url', 'college_level_projection', 'uc_score', 'last', 'first', 'effective_school_name', 'college_enrolled', 'school_city', 'state', 'county', 'position_played', 'position_projected', 'height', 'weight', 'wingspan', 'forty', 'shuttle', 'vertical', 'track60m', 'track100m', 'track200m', 'broad', 'trackLJ', 'highJump', 'trackSP', 'discus', 'updated', 'head_coach', 'player_head_shot', 'camp_event_videos', 'hudl_video_link', 'college_offers', 'commit', 'max_speed_video', 'query_name', 'player_id', 'class_field', 'source_recruit_id', 'source_contact_id', 'board', 'board_position_group', 'board_category', 'board_rank_type', 'board_rank_value'])
+        num_cols = df.columns.difference(['NAME', 'SCHOOL', 'TEAM', 'is_recruit', 'YEAR', 'PLAYER', 'PICK', 'PICK #', 'maxpreps_url', 'college_level_projection', 'uc_score', 'last', 'first', 'effective_school_name', 'college_enrolled', 'school_city', 'state', 'county', 'position_played', 'position_projected', 'height', 'weight', 'wingspan', 'forty', 'shuttle', 'vertical', 'track60m', 'track100m', 'track200m', 'broad', 'trackLJ', 'highJump', 'trackSP', 'discus', 'updated', 'head_coach', 'player_head_shot', 'camp_event_videos', 'hudl_video_link', 'college_offers', 'commit', 'max_speed_video', 'query_name', 'player_id', 'class_field', 'source_recruit_id', 'source_contact_id', 'board', 'board_position_group', 'board_category', 'board_rank_type', 'board_rank_value', 'TX', 'TX_EVENT'])
         
         for col in num_cols:
             df[col] = pd.to_numeric(df[col], errors='coerce')
@@ -719,7 +779,7 @@ def build_html():
                       'T/G', 'TFL', 'Sacks', 'Sack_Yds', 'S/G', 'HURS', 'YDL',
                       'SOLO', 'ASST', 'TKLS', 'INT', 'PD', 'GP_2', 'SACKS',
                       '3 CONE', '110HH', '200M', '300IH', '400M', '400R',
-                      'DISCUS', 'JAVELIN', 'TJ'}
+                      'DISCUS', 'JAVELIN', 'TJ', 'TX', 'TX_EVENT'}
     for group in position_data.values():
         group['players'] = [{k: v for k, v in p.items() if k in display_fields} for p in group['players']]
 
@@ -1527,8 +1587,18 @@ def build_html():
             if (active.includes('40')) ySelect.value = '40';
         }}
 
-        function formatVal(v, key) {{
+        // Texas's own measurements (p.TX lists the columns) read in scout notation, to the eighth, as on the board
+        // tags: height 6032 = 6' 3 2/8", a length 7478 = 74 7/8". Everyone else's numbers read as given.
+        function scoutVal(v, key) {{
+            const n = Math.round(Number(v) * 8);
+            if (key === 'HT') {{ const ft = Math.floor(n / 96), inch = Math.floor((n - ft * 96) / 8); return `${{ft}}${{String(inch).padStart(2, '0')}}${{n % 8}}`; }}
+            const whole = Math.floor(n / 8), rest = n % 8;
+            return `${{String(whole).padStart(2, '0')}}${{rest ? rest + '8' : '00'}}`;
+        }}
+
+        function formatVal(v, key, p) {{
             if (v === null || v === undefined || isNaN(v)) return "-";
+            if (p && Array.isArray(p.TX) && p.TX.includes(key) && ['HT', 'WING', 'ARM', 'HAND'].includes(key)) return scoutVal(v, key);
             if (key === 'HT') {{
                 // The exact height (5' 11.25"), not rounded to the inch. These are UC Report's numbers; scout
                 // notation (5112) is kept for Texas's own measurements, which this dashboard doesn't carry.
@@ -1617,11 +1687,12 @@ def build_html():
                 const tagClass = p.is_recruit ? 'tag-recruit' : 'tag-nfl';
                 const tagText = isHp ? '★ SEARCHED ' + (p.is_recruit ? 'RECRUIT' : 'PLAYER') : (p.career_outcome || 'Outcome unverified');
                 const draftInfo = p.is_recruit ? (p.class_field ? `HS class ${{p.class_field}}` : 'HS class unknown') : (p.ROUND ? `Round ${{p.ROUND}}` : 'Draft status unverified');
+                const texasInfo = p.TX_EVENT ? ` · Texas measured: ${{p.TX_EVENT}}` : '';
 
                 let metricsHtml = '';
                 activePosMetrics.forEach(m => {{
                     const val = p[m];
-                    const display = (val != null && !isNaN(val)) ? formatVal(val, m) : '-';
+                    const display = (val != null && !isNaN(val)) ? formatVal(val, m, p) : '-';
                     metricsHtml += `
                         <div class="metric-item">
                             <span class="m-label">${{metricDefs[m].label}}</span>
@@ -1634,7 +1705,7 @@ def build_html():
                     <div class="card-type-tag ${{tagClass}}">${{escapeText(tagText)}}</div>
                     <div class="card-header">
                         <div class="card-name">${{escapeText(p.NAME)}}</div>
-                        <div class="card-school">${{escapeText(p.SCHOOL || '-')}} • ${{escapeText(draftInfo)}}</div>
+                        <div class="card-school">${{escapeText(p.SCHOOL || '-')}} • ${{escapeText(draftInfo + texasInfo)}}</div>
                     </div>
                     <div class="metrics-grid">${{metricsHtml}}</div>
                 `;
@@ -1857,7 +1928,7 @@ def build_html():
                         yref: 'paper',
                         xanchor: 'center',
                         yanchor: 'middle',
-                        text: `★ <b>${{escapeText(hp.NAME)}}</b><br><span style="font-size:12px; font-weight:800;">${{formatVal(hpX, xField)}}</span>`,
+                        text: `★ <b>${{escapeText(hp.NAME)}}</b><br><span style="font-size:12px; font-weight:800;">${{formatVal(hpX, xField, hp)}}</span>`,
                         showarrow: false,
                         bgcolor: '#BF5700',
                         bordercolor: '#202020',
@@ -1901,7 +1972,7 @@ def build_html():
                     document.getElementById('ht-name').textContent = recruit.NAME;
                     document.getElementById('ht-school').textContent = recruit.SCHOOL || '-';
                     document.getElementById('ht-label').textContent = def.label;
-                    document.getElementById('ht-val').textContent = formatVal(recruit[xField], xField);
+                    document.getElementById('ht-val').textContent = formatVal(recruit[xField], xField, recruit);
                     const ev = eventData.event;
                     const tx = ev.clientX + 18;
                     const ty = Math.max(10, ev.clientY - 90);
@@ -1934,8 +2005,8 @@ def build_html():
                     text: valid.map(p => p.NAME),
                     customdata: valid.map(p => [
                         p.SCHOOL || p.TEAM || '',
-                        formatVal(p[xField], xField),
-                        formatVal(p[yField], yField),
+                        formatVal(p[xField], xField, p),
+                        formatVal(p[yField], yField, p),
                         p.is_recruit ? (p.class_field ? `HS Class ${{p.class_field}} Recruit` : 'Recruit') : `${{draftLine(p)}}<br>HS Class of ${{p.class_field || '?'}} · UC Report measurements`
                     ]),
                     hovertemplate: '<b>%{{text}}</b><br>%{{customdata[0]}}<br>%{{customdata[3]}}<br>' +
@@ -2011,7 +2082,7 @@ def build_html():
                         type: 'scatter',
                         name: hp.NAME,
                         hoverinfo: 'text',
-                        text: [`<b>${{escapeText(hp.NAME)}}</b><br>${{escapeText(hp.SCHOOL || '')}}<br>${{metricDefs[xField].label}}: ${{formatVal(hpX, xField)}}<br>${{metricDefs[yField].label}}: ${{formatVal(hpY, yField)}}`],
+                        text: [`<b>${{escapeText(hp.NAME)}}</b><br>${{escapeText(hp.SCHOOL || '')}}<br>${{metricDefs[xField].label}}: ${{formatVal(hpX, xField, hp)}}<br>${{metricDefs[yField].label}}: ${{formatVal(hpY, yField, hp)}}`],
                         marker: {{
                             size: 20,
                             color: '#FFD700',
@@ -2026,7 +2097,7 @@ def build_html():
                         y: hpY,
                         xref: 'x',
                         yref: 'y',
-                        text: `★ <b>${{escapeText(hp.NAME)}}</b><br>${{metricDefs[xField].label}}: ${{formatVal(hpX, xField)}} | ${{metricDefs[yField].label}}: ${{formatVal(hpY, yField)}}`,
+                        text: `★ <b>${{escapeText(hp.NAME)}}</b><br>${{metricDefs[xField].label}}: ${{formatVal(hpX, xField, hp)}} | ${{metricDefs[yField].label}}: ${{formatVal(hpY, yField, hp)}}`,
                         showarrow: true,
                         arrowhead: 2,
                         arrowsize: 1.2,
@@ -2292,18 +2363,18 @@ def build_html():
                 const hasX = p[xField] != null && !isNaN(p[xField]);
                 const hasY = p[yField] != null && !isNaN(p[yField]);
                 if (hasX && hasY) {{
-                    highlightStatus.innerHTML = `<span style="color:#202020;">${{defX ? defX.label : xField}}: <b>${{formatVal(p[xField], xField)}}</b> &nbsp;|&nbsp; ${{defY ? defY.label : yField}}: <b>${{formatVal(p[yField], yField)}}</b></span>`;
+                    highlightStatus.innerHTML = `<span style="color:#202020;">${{defX ? defX.label : xField}}: <b>${{formatVal(p[xField], xField, p)}}</b> &nbsp;|&nbsp; ${{defY ? defY.label : yField}}: <b>${{formatVal(p[yField], yField, p)}}</b></span>`;
                 }} else if (!hasX && !hasY) {{
                     highlightStatus.innerHTML = `<span style="color:#c53030;">⚠️ Missing ${{defX ? defX.label : xField}} and ${{defY ? defY.label : yField}} data</span>`;
                 }} else if (!hasX) {{
-                    highlightStatus.innerHTML = `<span style="color:#c53030;">⚠️ Missing ${{defX ? defX.label : xField}} data (${{defY ? defY.label : yField}}: <b>${{formatVal(p[yField], yField)}}</b>)</span>`;
+                    highlightStatus.innerHTML = `<span style="color:#c53030;">⚠️ Missing ${{defX ? defX.label : xField}} data (${{defY ? defY.label : yField}}: <b>${{formatVal(p[yField], yField, p)}}</b>)</span>`;
                 }} else {{
-                    highlightStatus.innerHTML = `<span style="color:#c53030;">⚠️ Missing ${{defY ? defY.label : yField}} data (${{defX ? defX.label : xField}}: <b>${{formatVal(p[xField], xField)}}</b>)</span>`;
+                    highlightStatus.innerHTML = `<span style="color:#c53030;">⚠️ Missing ${{defY ? defY.label : yField}} data (${{defX ? defX.label : xField}}: <b>${{formatVal(p[xField], xField, p)}}</b>)</span>`;
                 }}
             }} else {{
                 const hasX = p[xField] != null && !isNaN(p[xField]);
                 if (hasX) {{
-                    highlightStatus.innerHTML = `<span style="color:#202020;">${{defX ? defX.label : xField}}: <b>${{formatVal(p[xField], xField)}}</b></span>`;
+                    highlightStatus.innerHTML = `<span style="color:#202020;">${{defX ? defX.label : xField}}: <b>${{formatVal(p[xField], xField, p)}}</b></span>`;
                 }} else {{
                     highlightStatus.innerHTML = `<span style="color:#c53030;">⚠️ Missing ${{defX ? defX.label : xField}} data for this histogram</span>`;
                 }}
