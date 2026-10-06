@@ -1530,10 +1530,11 @@ def build_html():
         function formatVal(v, key) {{
             if (v === null || v === undefined || isNaN(v)) return "-";
             if (key === 'HT') {{
-                // Scout notation, to the eighth: 5110 = 5' 11", 6025 = 6' 2 5/8"
-                const eighths = Math.round(Number(v) * 8);
-                const ft = Math.floor(eighths / 96), inch = Math.floor((eighths - ft * 96) / 8), eighth = eighths % 8;
-                return `${{ft}}${{String(inch).padStart(2, '0')}}${{eighth}}`;
+                // The exact height (5' 11.25"), not rounded to the inch. These are UC Report's numbers; scout
+                // notation (5112) is kept for Texas's own measurements, which this dashboard doesn't carry.
+                const totalInches = Math.round(Number(v) * 100) / 100;
+                const ft = Math.floor(totalInches / 12), inch = Math.round((totalInches - ft * 12) * 100) / 100;
+                return `${{ft}}' ${{inch}}"`;
             }}
             const def = metricDefs[key];
             if (!def) return String(v);
