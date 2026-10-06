@@ -12,7 +12,7 @@ ENDPOINTS = {'get_masterlist', 'get_measurable', 'get_measurablecamp',
              'get_measurabletrack', 'get_measurablespeed', 'get_collegeoffers'}
 COLUMNS = '''dbkey player_id first last nickname class_field school_name juco_school_name
 college_enrolled school_city state county position_played position_projected
-college_level_projection uc_score height weight wingspan hand arm arm_length_verified
+college_level_projection uc_score height height_verified weight weight_verified wingspan hand arm arm_length_verified
 forty shuttle vertical broad track60m track100m track200m trackLJ highJump trackSP discus
 updated head_coach player_head_shot camp_event_videos hudl_video_link college_offers commit
 max_speed_video'''.split()

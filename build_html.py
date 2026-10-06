@@ -450,6 +450,9 @@ def build_html():
         recruit_df['SCHOOL'] = recruit_df['effective_school_name']
         recruit_df['TEAM'] = "High School Recruit"
         recruit_df['HT']   = recruit_df['height']
+        # UC Report verifies a height or weight measured at a camp; an unverified one is an estimate (shown with E)
+        for flag, column in (('height_verified', 'HT_EST'), ('weight_verified', 'WT_EST')):
+            recruit_df[column] = (~recruit_df[flag].fillna(False).astype(bool)).astype(int) if flag in recruit_df.columns else 0
         recruit_df['WT']   = recruit_df['weight']
         recruit_df['WING'] = recruit_df['wingspan']
         recruit_df['ARM'] = recruit_df['arm_length'] if 'arm_length' in recruit_df.columns else None
@@ -680,7 +683,7 @@ def build_html():
             if not pos_recruits.empty:
                 df = pd.concat([df, pos_recruits], ignore_index=True)
 
-        num_cols = df.columns.difference(['NAME', 'SCHOOL', 'TEAM', 'is_recruit', 'YEAR', 'PLAYER', 'PICK', 'PICK #', 'maxpreps_url', 'college_level_projection', 'uc_score', 'last', 'first', 'effective_school_name', 'college_enrolled', 'school_city', 'state', 'county', 'position_played', 'position_projected', 'height', 'weight', 'wingspan', 'forty', 'shuttle', 'vertical', 'track60m', 'track100m', 'track200m', 'broad', 'trackLJ', 'highJump', 'trackSP', 'discus', 'updated', 'head_coach', 'player_head_shot', 'camp_event_videos', 'hudl_video_link', 'college_offers', 'commit', 'max_speed_video', 'query_name', 'player_id', 'class_field', 'source_recruit_id', 'source_contact_id', 'board', 'board_position_group', 'board_category', 'board_rank_type', 'board_rank_value', 'TX', 'TX_EVENT'])
+        num_cols = df.columns.difference(['NAME', 'SCHOOL', 'TEAM', 'is_recruit', 'YEAR', 'PLAYER', 'PICK', 'PICK #', 'maxpreps_url', 'college_level_projection', 'uc_score', 'last', 'first', 'effective_school_name', 'college_enrolled', 'school_city', 'state', 'county', 'position_played', 'position_projected', 'height', 'weight', 'wingspan', 'forty', 'shuttle', 'vertical', 'track60m', 'track100m', 'track200m', 'broad', 'trackLJ', 'highJump', 'trackSP', 'discus', 'updated', 'head_coach', 'player_head_shot', 'camp_event_videos', 'hudl_video_link', 'college_offers', 'commit', 'max_speed_video', 'query_name', 'player_id', 'class_field', 'source_recruit_id', 'source_contact_id', 'board', 'board_position_group', 'board_category', 'board_rank_type', 'board_rank_value', 'TX', 'TX_EVENT', 'height_verified', 'weight_verified'])
         
         for col in num_cols:
             df[col] = pd.to_numeric(df[col], errors='coerce')
@@ -779,7 +782,7 @@ def build_html():
                       'T/G', 'TFL', 'Sacks', 'Sack_Yds', 'S/G', 'HURS', 'YDL',
                       'SOLO', 'ASST', 'TKLS', 'INT', 'PD', 'GP_2', 'SACKS',
                       '3 CONE', '110HH', '200M', '300IH', '400M', '400R',
-                      'DISCUS', 'JAVELIN', 'TJ', 'TX', 'TX_EVENT'}
+                      'DISCUS', 'JAVELIN', 'TJ', 'TX', 'TX_EVENT', 'HT_EST', 'WT_EST'}
     for group in position_data.values():
         group['players'] = [{k: v for k, v in p.items() if k in display_fields} for p in group['players']]
 
@@ -1599,13 +1602,18 @@ def build_html():
         function formatVal(v, key, p) {{
             if (v === null || v === undefined || isNaN(v)) return "-";
             const texas = p && Array.isArray(p.TX) && p.TX.includes(key);
-            // Heights carry where they were taken, as on the board tags: T for Texas (6032T), C for a camp (6'4.3C)
+            // A player's measurements carry where they were taken, as on the board tags: T for Texas (6032T, 7478T),
+            // C for a camp, UC Report's measured number (6'4.3C, 78.5C, 4.52C), E for UC Report's unverified height or
+            // weight (6'3E, 250E)
             if (key === 'HT' && p) {{
                 if (texas) return scoutVal(v, key) + 'T';
                 const ft = Math.floor(Number(v) / 12);
-                return `${{ft}}'${{Math.round((Number(v) - ft * 12) * 10) / 10}}C`;
+                return `${{ft}}'${{Math.round((Number(v) - ft * 12) * 10) / 10}}${{p.HT_EST ? 'E' : 'C'}}`;
             }}
-            if (texas && ['WING', 'ARM', 'HAND'].includes(key)) return scoutVal(v, key);
+            if (p && ['WING', 'ARM', 'HAND'].includes(key)) return texas ? scoutVal(v, key) + 'T' : `${{Math.round(Number(v) * 100) / 100}}C`;
+            if (key === 'WT' && p) return `${{Math.round(Number(v))}}${{texas ? 'T' : p.WT_EST ? 'E' : 'C'}}`;
+            // Testing numbers are UC Report camp results
+            if (p && ['40', 'SHUT', 'VERT', 'BROAD'].includes(key)) return `${{Number(v).toFixed(metricDefs[key].decimals)}}C`;
             if (key === 'HT') {{
                 // An average of many players: the exact height, not rounded to the inch
                 const totalInches = Math.round(Number(v) * 100) / 100;
