@@ -159,6 +159,45 @@ def standardize_measurables(df):
     return df
 
 
+# MileSplit personal records (Tars's nightly scrape, scripts/milesplit in Tars) win over UC Report's copied track
+# values: they're meet results with a date. Times are seconds, jumps and throws inches, like the columns below.
+MILESPLIT_KV = os.path.expanduser('~/.tars/milesplit/kv.json')
+MILESPLIT_EVENTS = {'100m': '100M', '200m': '200M', '400m': '400M', '110m hurdles': '110HH', '300m hurdles': '300IH',
+                    'High jump': 'HJ', 'Long jump': 'LJ', 'Triple jump': 'TJ', 'Shot put': 'SHOT', 'Discus': 'DISCUS',
+                    'Javelin': 'JAVELIN'}
+_milesplit = None
+
+
+def milesplit_prs():
+    """{UC Report player id: {column: value}} from the MileSplit index, or {} when it isn't on this Mac."""
+    global _milesplit
+    if _milesplit is None:
+        _milesplit = {}
+        try:
+            entries = json.load(open(MILESPLIT_KV))
+            index = json.loads(next(e['value'] for e in entries if e['key'] == 'track:index'))
+            for athlete in index['athletes']:
+                marks = {MILESPLIT_EVENTS[pr['event']]: pr['value'] for pr in athlete['prs'] if pr['event'] in MILESPLIT_EVENTS}
+                if marks:
+                    _milesplit[int(athlete['ucId'])] = marks
+            print(f"MileSplit: track PRs for {len(_milesplit)} players")
+        except (OSError, StopIteration, ValueError, KeyError) as error:
+            print(f"MileSplit: no track index ({error}); keeping UC Report track values")
+    return _milesplit
+
+
+def apply_milesplit(df):
+    """Overlay MileSplit PRs on a frame keyed by player_id (after standardize_measurables, so nothing is reconverted)."""
+    prs = milesplit_prs()
+    if df.empty or not prs or 'player_id' not in df.columns:
+        return df
+    ids = pd.to_numeric(df['player_id'], errors='coerce')
+    for column in MILESPLIT_EVENTS.values():
+        values = ids.map(lambda pid: prs.get(int(pid), {}).get(column) if pd.notna(pid) else None)
+        df[column] = pd.to_numeric(values, errors='coerce').combine_first(pd.to_numeric(df[column], errors='coerce') if column in df.columns else pd.Series(index=df.index, dtype=float))
+    return df
+
+
 NFL_TEAMS = [
     'Arizona Cardinals', 'Atlanta Falcons', 'Baltimore Ravens', 'Buffalo Bills', 'Carolina Panthers', 'Chicago Bears',
     'Cincinnati Bengals', 'Cleveland Browns', 'Dallas Cowboys', 'Denver Broncos', 'Detroit Lions', 'Green Bay Packers',
@@ -275,6 +314,7 @@ def load_wiki_ucreport_picks(path):
     raw['DISCUS'] = pd.to_numeric(raw['discus'], errors='coerce') if 'discus' in raw.columns else None
     raw['is_recruit'] = False
     raw = standardize_measurables(raw)
+    raw = apply_milesplit(raw)
     return raw[raw['NAME'].str.strip().str.len() > 0].copy()
 
 
@@ -365,6 +405,7 @@ def build_html():
         recruit_df['HJ'] = recruit_df['highJump'] if 'highJump' in recruit_df.columns else None
         recruit_df['DISCUS'] = recruit_df['discus'] if 'discus' in recruit_df.columns else None
         recruit_df = standardize_measurables(recruit_df)
+        recruit_df = apply_milesplit(recruit_df)
 
         def col(name):
             return recruit_df[name] if name in recruit_df.columns else None
