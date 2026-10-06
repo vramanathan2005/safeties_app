@@ -1598,10 +1598,16 @@ def build_html():
 
         function formatVal(v, key, p) {{
             if (v === null || v === undefined || isNaN(v)) return "-";
-            if (p && Array.isArray(p.TX) && p.TX.includes(key) && ['HT', 'WING', 'ARM', 'HAND'].includes(key)) return scoutVal(v, key);
+            const texas = p && Array.isArray(p.TX) && p.TX.includes(key);
+            // Heights carry where they were taken, as on the board tags: T for Texas (6032T), C for a camp (6'4.3C)
+            if (key === 'HT' && p) {{
+                if (texas) return scoutVal(v, key) + 'T';
+                const ft = Math.floor(Number(v) / 12);
+                return `${{ft}}'${{Math.round((Number(v) - ft * 12) * 10) / 10}}C`;
+            }}
+            if (texas && ['WING', 'ARM', 'HAND'].includes(key)) return scoutVal(v, key);
             if (key === 'HT') {{
-                // The exact height (5' 11.25"), not rounded to the inch. These are UC Report's numbers; scout
-                // notation (5112) is kept for Texas's own measurements, which this dashboard doesn't carry.
+                // An average of many players: the exact height, not rounded to the inch
                 const totalInches = Math.round(Number(v) * 100) / 100;
                 const ft = Math.floor(totalInches / 12), inch = Math.round((totalInches - ft * 12) * 100) / 100;
                 return `${{ft}}' ${{inch}}"`;
