@@ -27,7 +27,7 @@ def load_board_names_by_year():
             continue
         year = int(match.group(1))
         board_df = pd.read_csv(os.path.join(RECRUIT_DATA_DIR, filename))
-        board_names_by_year[year] = {normalize_name(n) for n in board_df['name'].dropna()}
+        board_names_by_year[year] = {(normalize_name(r['name']), r.get('school'), r.get('city'), r.get('state')) for _, r in board_df.dropna(subset=['name']).iterrows()}
     return board_names_by_year
 
 POSITIONS = {
@@ -204,6 +204,76 @@ def apply_milesplit(df):
 TEXAS_MEASURABLES = os.path.expanduser('~/.tars/texas_measurables.json')
 TEXAS_FIELDS = {'ht': 'HT', 'wt': 'WT', 'wing': 'WING', 'arm': 'ARM', 'hand': 'HAND'}
 
+# ---- Tars IDs (Tars: lib/people.ts, lib/schools.ts) -----------------------------------------------------------------
+# Every UC Report prospect's Tars ID, and every high school's Tars school ID by the names sources give it, so a
+# recruit is matched to Texas's measurements and to a board by who he is and where he plays, not by name alone (two
+# 2027 Jackson Cooks: Westlake's lineman and Harlem's safety). Read from Tars's database after the night's linking;
+# yesterday's copy if it can't be read.
+TARS = os.path.expanduser('~/Tars')
+TARS_IDS = os.path.expanduser('~/.tars/tars_ids.json')
+STATE_CODES = {'alabama': 'AL', 'alaska': 'AK', 'arizona': 'AZ', 'arkansas': 'AR', 'california': 'CA', 'colorado': 'CO', 'connecticut': 'CT',
+    'delaware': 'DE', 'district of columbia': 'DC', 'florida': 'FL', 'georgia': 'GA', 'hawaii': 'HI', 'idaho': 'ID', 'illinois': 'IL',
+    'indiana': 'IN', 'iowa': 'IA', 'kansas': 'KS', 'kentucky': 'KY', 'louisiana': 'LA', 'maine': 'ME', 'maryland': 'MD',
+    'massachusetts': 'MA', 'michigan': 'MI', 'minnesota': 'MN', 'mississippi': 'MS', 'missouri': 'MO', 'montana': 'MT', 'nebraska': 'NE',
+    'nevada': 'NV', 'new hampshire': 'NH', 'new jersey': 'NJ', 'new mexico': 'NM', 'new york': 'NY', 'north carolina': 'NC',
+    'north dakota': 'ND', 'ohio': 'OH', 'oklahoma': 'OK', 'oregon': 'OR', 'pennsylvania': 'PA', 'rhode island': 'RI',
+    'south carolina': 'SC', 'south dakota': 'SD', 'tennessee': 'TN', 'texas': 'TX', 'utah': 'UT', 'vermont': 'VT', 'virginia': 'VA',
+    'washington': 'WA', 'west virginia': 'WV', 'wisconsin': 'WI', 'wyoming': 'WY'}
+
+
+def _d1(sql):
+    import subprocess
+    out = subprocess.run(['npx', 'wrangler', 'd1', 'execute', 'tars-d1', '--remote', '--json', '--command', sql], cwd=TARS, capture_output=True, text=True, timeout=180)
+    if out.returncode:
+        raise RuntimeError((out.stderr or out.stdout)[-300:])
+    return json.loads(out.stdout)[0]['results']
+
+
+def load_tars_ids():
+    try:
+        ids = {'people': {r['source_id']: r['person_id'] for r in _d1("SELECT source_id, person_id FROM tars_person_links WHERE source = 'uc'")},
+               'schools': {r['source_id']: r['school_id'] for r in _d1("SELECT source_id, school_id FROM tars_school_links WHERE source = 'hs'")}}
+        os.makedirs(os.path.dirname(TARS_IDS), exist_ok=True)
+        json.dump(ids, open(TARS_IDS, 'w'))
+    except Exception as error:
+        try:
+            ids = json.load(open(TARS_IDS))
+            print(f"Tars IDs: yesterday's copy ({error})")
+        except (OSError, ValueError):
+            print(f"Tars IDs: none ({error}); matching by name and school words")
+            ids = {'people': {}, 'schools': {}}
+    # name|state -> the school IDs with that name in that state (a source with no city, like Texas's sheet)
+    by_name_state = {}
+    for key, school_id in ids['schools'].items():
+        name, _, state = key.split('|') if key.count('|') == 2 else (key, '', '')
+        by_name_state.setdefault(f'{name}|{state}', set()).add(school_id)
+    ids['by_name_state'] = by_name_state
+    print(f"Tars IDs: {len(ids['people'])} prospects, {len(set(ids['schools'].values()))} high schools")
+    return ids
+
+
+_HS_WORDS = re.compile(r'\b(?:high school|senior high|high|hs|h\.s\.)\b', re.I)
+def _words(text):
+    return ' '.join(re.sub(r'[^a-z0-9& ]', ' ', str(text or '').lower().replace('-', ' ')).split())
+def _hs_name(text):
+    return _words(_HS_WORDS.sub(' ', str(text or '')))
+def _state(text):
+    t = str(text or '').strip()
+    return t.upper() if len(t) == 2 else STATE_CODES.get(t.lower(), t.upper())
+
+
+def school_id(ids, name, city, state):
+    """A high school's Tars ID from its name, city and state (scripts/schools/link_schools.py's key); by name and state
+    alone when the city isn't known (or doesn't match), if only one school there has the name."""
+    if not ids or not str(name or '').strip() or str(name).lower() == 'nan':
+        return None
+    st = _state(state)
+    hit = ids['schools'].get(f'{_hs_name(name)}|{_words(city) if str(city).lower() != "nan" else ""}|{st}')
+    if hit:
+        return hit
+    options = ids['by_name_state'].get(f'{_hs_name(name)}|{st}', set())
+    return next(iter(options)) if len(options) == 1 else None
+
 
 def texas_name_key(name):
     """The same key Tars uses: lowercase, no Jr./III, letters only."""
@@ -216,8 +286,9 @@ def _school_words(school):
     return {w for w in re.sub(r'[^a-z0-9\s]', ' ', str(school or '').lower()).split() if len(w) > 2 and w not in stop}
 
 
-def apply_texas(df):
-    """Overlay the newest Texas measurement of each kind on recruits matched by name, and class or school."""
+def apply_texas(df, ids=None):
+    """Overlay the newest Texas measurement of each kind on recruits matched by name, class and school: the same Tars
+    school ID when both schools have one, else shared school words."""
     try:
         sheet = json.load(open(TEXAS_MEASURABLES))
     except (OSError, ValueError) as error:
@@ -234,9 +305,13 @@ def apply_texas(df):
             continue
         cls = pd.to_numeric(row.get('class_field'), errors='coerce')
         school = _school_words(row.get('SCHOOL'))
+        mine = school_id(ids, row.get('school_name') if pd.notna(row.get('school_name', None)) else row.get('SCHOOL'), row.get('school_city'), row.get('state'))
         def same_player(e):
-            if pd.notna(cls) and e.get('year'):
-                return int(e['year']) == int(cls)
+            if pd.notna(cls) and e.get('year') and int(e['year']) != int(cls):
+                return False
+            theirs_id = school_id(ids, e.get('school'), '', e.get('state'))
+            if mine and theirs_id:
+                return mine == theirs_id
             theirs = _school_words(e.get('school'))
             return not school or not theirs or bool(school & theirs)
         entries = sorted((e for e in entries if same_player(e)), key=lambda e: e.get('date') or '', reverse=True)
@@ -419,6 +494,7 @@ def load_csv(path):
         return pd.DataFrame()
 
 def build_html():
+    tars_ids = None
     base_path = ROOT_DIR
     draft_data_path = DRAFT_DATA_DIR
     recruit_data_path = RECRUIT_DATA_DIR
@@ -468,7 +544,11 @@ def build_html():
         recruit_df['DISCUS'] = recruit_df['discus'] if 'discus' in recruit_df.columns else None
         recruit_df = standardize_measurables(recruit_df)
         recruit_df = apply_milesplit(recruit_df)
-        recruit_df = apply_texas(recruit_df)
+        tars_ids = load_tars_ids()
+        recruit_df['tars_id'] = recruit_df['player_id'].map(lambda v: tars_ids['people'].get(str(int(v))) if pd.notna(v) else None)
+        recruit_df['tars_school_id'] = [school_id(tars_ids, n if pd.notna(n) else e, c, st) for n, e, c, st in
+            zip(recruit_df.get('school_name', recruit_df['SCHOOL']), recruit_df['SCHOOL'], recruit_df.get('school_city', [None] * len(recruit_df)), recruit_df.get('state', [None] * len(recruit_df)))]
+        recruit_df = apply_texas(recruit_df, tars_ids)
 
         def col(name):
             return recruit_df[name] if name in recruit_df.columns else None
@@ -683,7 +763,7 @@ def build_html():
             if not pos_recruits.empty:
                 df = pd.concat([df, pos_recruits], ignore_index=True)
 
-        num_cols = df.columns.difference(['NAME', 'SCHOOL', 'TEAM', 'is_recruit', 'YEAR', 'PLAYER', 'PICK', 'PICK #', 'maxpreps_url', 'college_level_projection', 'uc_score', 'last', 'first', 'effective_school_name', 'college_enrolled', 'school_city', 'state', 'county', 'position_played', 'position_projected', 'height', 'weight', 'wingspan', 'forty', 'shuttle', 'vertical', 'track60m', 'track100m', 'track200m', 'broad', 'trackLJ', 'highJump', 'trackSP', 'discus', 'updated', 'head_coach', 'player_head_shot', 'camp_event_videos', 'hudl_video_link', 'college_offers', 'commit', 'max_speed_video', 'query_name', 'player_id', 'class_field', 'source_recruit_id', 'source_contact_id', 'board', 'board_position_group', 'board_category', 'board_rank_type', 'board_rank_value', 'TX', 'TX_EVENT', 'height_verified', 'weight_verified'])
+        num_cols = df.columns.difference(['NAME', 'SCHOOL', 'TEAM', 'is_recruit', 'YEAR', 'PLAYER', 'PICK', 'PICK #', 'maxpreps_url', 'college_level_projection', 'uc_score', 'last', 'first', 'effective_school_name', 'college_enrolled', 'school_city', 'state', 'county', 'position_played', 'position_projected', 'height', 'weight', 'wingspan', 'forty', 'shuttle', 'vertical', 'track60m', 'track100m', 'track200m', 'broad', 'trackLJ', 'highJump', 'trackSP', 'discus', 'updated', 'head_coach', 'player_head_shot', 'camp_event_videos', 'hudl_video_link', 'college_offers', 'commit', 'max_speed_video', 'query_name', 'player_id', 'class_field', 'source_recruit_id', 'source_contact_id', 'board', 'board_position_group', 'board_category', 'board_rank_type', 'board_rank_value', 'TX', 'TX_EVENT', 'height_verified', 'weight_verified', 'tars_id', 'tars_school_id'])
         
         for col in num_cols:
             df[col] = pd.to_numeric(df[col], errors='coerce')
@@ -738,16 +818,28 @@ def build_html():
 
     # Flag recruits who are actually on one of our recruiting boards (data/recruits/<year>_recruits.csv,
     # e.g. 2027_recruits.csv) vs. the much larger pool of every UCReport prospect in that class.
-    # Matched by normalized full name within the board's own class year — board exports don't carry
-    # a player_id we can join on. Drafted players are untouched; board status only applies to recruits.
+    # Board exports don't carry a UC Report id, so a recruit is on a board when a row in his class has his name and his
+    # school: the same Tars school ID when both resolve, else shared school words. Drafted players are untouched.
     board_names_by_year = load_board_names_by_year()
+    tars_ids_for_boards = tars_ids if tars_ids is not None else load_tars_ids()
     for group in position_data.values():
         for player in group['players']:
             if not player.get('is_recruit'):
                 continue
             year = player.get('class_field')
             names = board_names_by_year.get(int(year)) if year is not None else None
-            player['on_board'] = bool(names) and normalize_name(player.get('NAME')) in names
+            # on the board when a board row has his name and his school (by Tars school ID, else school words)
+            mine = normalize_name(player.get('NAME'))
+            school = player.get('SCHOOL')
+            def same_school(row):
+                _, their_school, their_city, their_state = row
+                a = school_id(tars_ids_for_boards, their_school, their_city, their_state)
+                b = player.get('tars_school_id')
+                if a and b:
+                    return a == b
+                ours, theirs = _school_words(school), _school_words(their_school)
+                return not ours or not theirs or bool(ours & theirs)
+            player['on_board'] = bool(names) and any(r[0] == mine and same_school(r) for r in names)
 
     # Drafted players: every team under its full name (the draft files mix "Steelers", "Pittsburg Steelers"…), so
     # each gets its team color, and both pick numbers. The combine files carry the pick within the round as PICK #
@@ -782,7 +874,7 @@ def build_html():
                       'T/G', 'TFL', 'Sacks', 'Sack_Yds', 'S/G', 'HURS', 'YDL',
                       'SOLO', 'ASST', 'TKLS', 'INT', 'PD', 'GP_2', 'SACKS',
                       '3 CONE', '110HH', '200M', '300IH', '400M', '400R',
-                      'DISCUS', 'JAVELIN', 'TJ', 'TX', 'TX_EVENT', 'HT_EST', 'WT_EST'}
+                      'DISCUS', 'JAVELIN', 'TJ', 'TX', 'TX_EVENT', 'HT_EST', 'WT_EST', 'tars_id'}
     for group in position_data.values():
         group['players'] = [{k: v for k, v in p.items() if k in display_fields} for p in group['players']]
 
