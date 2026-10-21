@@ -1147,6 +1147,9 @@ def build_html():
             border-bottom: 1px solid var(--border);
         }}
         .card-name {{ font-size: 18px; font-weight: 800; }}
+        a.profile-link {{ color: inherit; text-decoration: underline; text-decoration-color: rgba(191, 87, 0, .5); text-underline-offset: 3px; }}
+        a.card-name.profile-link {{ display: block; }}
+        a.profile-link:hover {{ color: #bf5700; }}
         .card-school {{ font-size: 13px; color: var(--text-light); font-weight: 600; }}
         
         .metrics-grid {{
@@ -1668,8 +1671,11 @@ def build_html():
             );
         }}
 
+        // Rebuild the axis menus for this position's metrics, keeping the axes already chosen when this position has them
+        // (changing position shouldn't reset the chart); weight and the 40 otherwise.
         function updateSelectors() {{
             const active = getChartMetrics();
+            const keepX = xSelect.value, keepY = ySelect.value;
             xSelect.innerHTML = '';
             ySelect.innerHTML = '';
             active.forEach(m => {{
@@ -1677,9 +1683,27 @@ def build_html():
                 xSelect.appendChild(new Option(label, m));
                 ySelect.appendChild(new Option(label, m));
             }});
-            
-            if (active.includes('WT')) xSelect.value = 'WT';
-            if (active.includes('40')) ySelect.value = '40';
+
+            if (active.includes(keepX)) xSelect.value = keepX;
+            else if (active.includes('WT')) xSelect.value = 'WT';
+            if (active.includes(keepY)) ySelect.value = keepY;
+            else if (active.includes('40')) ySelect.value = '40';
+        }}
+
+        // A player's Tars profile, when the dashboard is shown inside Tars: a recruit by his Tars ID, a drafted player by
+        // name (Tars looks him up). Opens in a new tab so the dashboard keeps its place.
+        const IN_TARS = window.parent !== window;
+        function profileHref(p) {{
+            if (!IN_TARS || !p) return null;
+            if (p.is_recruit && p.tars_id) return `/players/${{encodeURIComponent(p.tars_id)}}/high-school${{p.class_field ? '/' + encodeURIComponent(p.class_field) : ''}}`;
+            if (!p.is_recruit && p.NAME) return `/players?player=${{encodeURIComponent(p.NAME)}}&league=nfl`;
+            return null;
+        }}
+        function nameHtml(p, className) {{
+            const href = profileHref(p);
+            return href
+                ? `<a class="${{className}} profile-link" href="${{href}}" target="_blank" rel="noopener" title="Open ${{escapeText(p.NAME)}}'s Tars profile">${{escapeText(p.NAME)}}</a>`
+                : `<div class="${{className}}">${{escapeText(p.NAME)}}</div>`;
         }}
 
         // Texas's own measurements (p.TX lists the columns) read in scout notation, to the eighth, as on the board
@@ -1810,7 +1834,7 @@ def build_html():
                 card.innerHTML = `
                     <div class="card-type-tag ${{tagClass}}">${{escapeText(tagText)}}</div>
                     <div class="card-header">
-                        <div class="card-name">${{escapeText(p.NAME)}}</div>
+                        ${{nameHtml(p, 'card-name')}}
                         <div class="card-school">${{escapeText(p.SCHOOL || '-')}} • ${{escapeText(draftInfo + texasInfo)}}</div>
                     </div>
                     <div class="metrics-grid">${{metricsHtml}}</div>
@@ -2464,7 +2488,8 @@ def build_html():
             }}
             const p = highlightedPlayer;
             highlightBanner.style.display = 'flex';
-            highlightName.textContent = `★ ${{p.NAME}}`;
+            const href = profileHref(p);
+            highlightName.innerHTML = href ? `★ <a class="profile-link" href="${{href}}" target="_blank" rel="noopener">${{escapeText(p.NAME)}}</a>` : `★ ${{escapeText(p.NAME)}}`;
             const typeStr = p.is_recruit ? (p.class_field ? `HS Class ${{p.class_field}} Recruit` : 'HS Recruit') : (p.ROUND ? `NFL Draft Rd ${{p.ROUND}} (${{p.YEAR || ''}})` : (p.TEAM || 'NFL Drafted'));
             highlightMeta.textContent = `${{p.SCHOOL || 'School unknown'}} • ${{typeStr}} • Position: ${{((p.position_played || currentPos) || '').toUpperCase()}}`;
 
