@@ -2828,6 +2828,7 @@ def build_html():
 
         // Print / PDF (the button, or the browser's own print): a title saying what's plotted, and the chart drawn at a
         // size that fills a landscape page, then back to fitting the window
+        let savedLayout = null;
         const shownText = (sel) => sel && sel.selectedIndex >= 0 ? sel.options[sel.selectedIndex].text : '';
         window.addEventListener('beforeprint', () => {{
             const metrics = chartType.value === 'scatter' ? `${{shownText(ySelect)}} vs ${{shownText(xSelect)}}` : `${{shownText(xSelect)}} (histogram)`;
@@ -2838,10 +2839,50 @@ def build_html():
             const head = document.createElement('strong');
             head.textContent = `${{shownText(posSelect)}} · ${{metrics}}`;
             title.append(head, document.createTextNode(filters));
-            Plotly.relayout('plot', {{ width: 960, height: 600 }});
+            // each plotted player's name, height and weight beside his dot, wherever the label covers no other label or dot
+            // (searched and Texas-measured players first, then those farthest from the middle); no room, no label
+            const xf = xSelect.value, yf = ySelect.value, gd = document.getElementById('plot');
+            savedLayout = {{ annotations: (gd.layout.annotations || []).slice(), showlegend: gd.layout.showlegend }};
+            Plotly.relayout(gd, {{ width: 960, height: 600, showlegend: false }});
+            if (chartType.value !== 'scatter') return;
+            const has = (p, f) => p[f] !== null && p[f] !== undefined && !isNaN(p[f]);
+            const shown = applyChartFilters(getFilteredPlayers()).filter(p => has(p, xf) && has(p, yf));
+            const xa = gd._fullLayout.xaxis, ya = gd._fullLayout.yaxis;
+            const px = p => xa._offset + xa.l2p(p[xf]), py = p => ya._offset + ya.l2p(p[yf]);
+            const plotBox = {{ l: xa._offset, r: xa._offset + xa._length, t: ya._offset, b: ya._offset + ya._length }};
+            const info = p => [has(p, 'HT') ? formatVal(p.HT, 'HT', p) : '', has(p, 'WT') ? formatVal(p.WT, 'WT', p) : ''].filter(Boolean).join(' · ');
+            const mid = f => {{ const v = shown.map(p => p[f]).sort((a, b) => a - b); return v[Math.floor(v.length / 2)]; }};
+            const span = f => (Math.max(...shown.map(p => p[f])) - Math.min(...shown.map(p => p[f]))) || 1;
+            const [mx, my, sxr, syr] = [mid(xf), mid(yf), span(xf), span(yf)];
+            const isHp = p => highlightedPlayer && (p.NAME === highlightedPlayer.NAME && (p.SCHOOL || '') === (highlightedPlayer.SCHOOL || ''));
+            const priority = p => (isHp(p) ? 20 : 0) + (p.TX_EVENT ? 10 : 0) + Math.hypot((p[xf] - mx) / sxr, (p[yf] - my) / syr);
+            const dots = shown.map(p => [px(p), py(p)]);
+            const placed = [], labels = [];
+            const free = (b, cx, cy) => b.l >= plotBox.l && b.r <= plotBox.r && b.t >= plotBox.t && b.b <= plotBox.b
+                && !placed.some(o => b.l < o.r && b.r > o.l && b.t < o.b && b.b > o.t)
+                && !dots.some(([x, y]) => (x !== cx || y !== cy) && x > b.l - 5 && x < b.r + 5 && y > b.t - 5 && y < b.b + 5);
+            shown.slice().sort((a, b) => priority(b) - priority(a)).forEach(p => {{
+                const cx = px(p), cy = py(p), name = p.NAME || '', sub = info(p);
+                const w = Math.max(name.length, sub.length) * 4.6 + 4, h = 20;
+                const spots = [
+                    {{ xanchor: 'left', yanchor: 'middle', xshift: 9, yshift: 0, b: {{ l: cx + 8, r: cx + 9 + w, t: cy - h / 2, b: cy + h / 2 }} }},
+                    {{ xanchor: 'right', yanchor: 'middle', xshift: -9, yshift: 0, b: {{ l: cx - 9 - w, r: cx - 8, t: cy - h / 2, b: cy + h / 2 }} }},
+                    {{ xanchor: 'center', yanchor: 'bottom', xshift: 0, yshift: 8, b: {{ l: cx - w / 2, r: cx + w / 2, t: cy - 8 - h, b: cy - 8 }} }},
+                    {{ xanchor: 'center', yanchor: 'top', xshift: 0, yshift: -8, b: {{ l: cx - w / 2, r: cx + w / 2, t: cy + 8, b: cy + 8 + h }} }},
+                ];
+                const spot = spots.find(s => free(s.b, cx, cy));
+                if (!spot) return;
+                placed.push(spot.b);
+                labels.push({{ x: p[xf], y: p[yf], xref: 'x', yref: 'y', showarrow: false, xanchor: spot.xanchor, yanchor: spot.yanchor,
+                    xshift: spot.xshift, yshift: spot.yshift, align: spot.xanchor === 'right' ? 'right' : spot.xanchor === 'left' ? 'left' : 'center',
+                    text: `<b>${{name.replace(/</g, '&lt;')}}</b>${{sub ? `<br><span style="color:#555">${{sub}}</span>` : ''}}`,
+                    font: {{ size: 8, color: '#111' }}, bgcolor: 'rgba(255,255,255,0.75)', borderpad: 0 }});
+            }});
+            Plotly.relayout(gd, {{ annotations: savedLayout.annotations.concat(labels) }});
         }});
         window.addEventListener('afterprint', () => {{
             const gd = document.getElementById('plot');
+            if (savedLayout) {{ Plotly.relayout(gd, {{ annotations: savedLayout.annotations, showlegend: savedLayout.showlegend }}); savedLayout = null; }}
             delete gd.layout.width; delete gd.layout.height;
             Plotly.Plots.resize(gd);
         }});
