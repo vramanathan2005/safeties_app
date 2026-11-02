@@ -1180,6 +1180,19 @@ def build_html():
         .hover-tooltip .ht-stat {{ display: flex; justify-content: space-between; align-items: center; gap: 20px; }}
         .hover-tooltip .ht-stat-label {{ font-size: 11px; font-weight: 700; color: var(--text-light); text-transform: uppercase; }}
         .hover-tooltip .ht-stat-val {{ font-size: 20px; font-weight: 800; color: var(--primary); }}
+        #print-title {{ display: none; }}
+        /* Print / PDF: the chart alone on a landscape page, titled with what's plotted */
+        @media print {{
+            @page {{ size: letter landscape; margin: 0.4in; }}
+            body {{ background: #fff !important; }}
+            .navbar, .workspace-heading, #top-metrics, .controls-row, .hover-tooltip, #player-search-dropdown, #year-filter-panel,
+            .panel:not(:has(#plot)), .panel-heading span {{ display: none !important; }}
+            .container {{ max-width: none; padding: 0; margin: 0; }}
+            .panel:has(#plot) {{ border: 0; box-shadow: none; padding: 0; margin: 0; }}
+            #btn-clear-highlight {{ display: none !important; }}
+            #print-title {{ display: block; margin: 0 0 8px; font-size: 13px; color: #333; }}
+            #print-title strong {{ display: block; font-size: 18px; color: #111; }}
+        }}
         {theme_css}
     </style>
 </head>
@@ -1252,6 +1265,9 @@ def build_html():
                 <div class="control-group" style="margin-left: auto; padding-bottom: 5px;">
                     <button id="clear-selection" class="btn-clear">Clear Filter</button>
                 </div>
+                <div class="control-group" style="padding-bottom: 5px;">
+                    <button type="button" id="print-chart" class="btn-clear" style="display: block;" title="Print the chart, or save it as a PDF from the print dialog">Print / PDF</button>
+                </div>
                 <div class="hint-text">
                     <i id="dynamic-hint">Use the dropdowns to explore data. Filter by selecting regions on the chart.</i>
                 </div>
@@ -1264,6 +1280,7 @@ def build_html():
                 </div>
                 <button type="button" id="btn-clear-highlight" class="btn-unhighlight">Clear Highlight</button>
             </div>
+            <div id="print-title"></div>
             <div id="plot"></div>
         </div>
         
@@ -2808,6 +2825,27 @@ def build_html():
             Plotly.restyle('plot', 'selectedpoints', null);
             drawPlot();
         }};
+
+        // Print / PDF (the button, or the browser's own print): a title saying what's plotted, and the chart drawn at a
+        // size that fills a landscape page, then back to fitting the window
+        const shownText = (sel) => sel && sel.selectedIndex >= 0 ? sel.options[sel.selectedIndex].text : '';
+        window.addEventListener('beforeprint', () => {{
+            const metrics = chartType.value === 'scatter' ? `${{shownText(ySelect)}} vs ${{shownText(xSelect)}}` : `${{shownText(xSelect)}} (histogram)`;
+            const filters = [yearBtn.textContent.trim(), toggleRecruits.checked ? 'UCReport players shown' : '', toggleBoardOnly.checked ? 'board only' : '',
+                             highlightedPlayer ? `highlighting ${{document.getElementById('player-highlight-name').textContent}}` : ''].filter(Boolean).join(' · ');
+            const title = document.getElementById('print-title');
+            title.innerHTML = '';
+            const head = document.createElement('strong');
+            head.textContent = `${{shownText(posSelect)}} · ${{metrics}}`;
+            title.append(head, document.createTextNode(filters));
+            Plotly.relayout('plot', {{ width: 960, height: 600 }});
+        }});
+        window.addEventListener('afterprint', () => {{
+            const gd = document.getElementById('plot');
+            delete gd.layout.width; delete gd.layout.height;
+            Plotly.Plots.resize(gd);
+        }});
+        document.getElementById('print-chart').onclick = () => window.print();
 
         init();
     </script>
