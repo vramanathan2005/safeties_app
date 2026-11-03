@@ -1575,6 +1575,14 @@ def build_html():
         const toggleBoardOnly = document.getElementById('toggle-board-only');
         
         let highlightedPlayer = null;
+        // Measurable limits set by the "type it" box ("a 40 of 4.5 or better, 180+ lb"): players inside every one stay bright
+        // on the scatter and the rest dim; the cards list only them. Cleared with Clear Filter.
+        let aiLimits = [];
+        const passesLimits = (p) => aiLimits.every(l => {{
+            const v = p[l.key];
+            if (v === null || v === undefined || isNaN(v)) return false;
+            return (l.min == null || v >= l.min) && (l.max == null || v <= l.max);
+        }});
         const playerSearchInput = document.getElementById('player-search-input');
         const playerSearchClear = document.getElementById('player-search-clear');
         const playerSearchDropdown = document.getElementById('player-search-dropdown');
@@ -2357,11 +2365,13 @@ def build_html():
                     }});
                 }}
 
+                if (aiLimits.length) trace.selectedpoints = valid.map((p, i) => passesLimits(p) ? i : -1).filter(i => i >= 0);
                 drawFigure(traces, layout, {{ displaylogo: false }});
                 traceDataMap[0] = valid;
                 
-                // Show ALL players for the position by default in the list
-                renderCards(all);
+                // Show ALL players for the position by default in the list (only those inside the typed limits, if any)
+                renderCards(aiLimits.length ? applyChartFilters(all).filter(passesLimits) : all);
+                if (aiLimits.length) document.getElementById('clear-selection').style.display = 'block';
             }}
 
             const plotDiv = document.getElementById('plot');
@@ -2909,6 +2919,7 @@ def build_html():
         toggleBoardOnly.onchange = drawPlot;
         
         document.getElementById('clear-selection').onclick = () => {{
+            aiLimits = [];
             resetHistFilter();
             Plotly.restyle('plot', 'selectedpoints', null);
             drawPlot();
@@ -2997,6 +3008,8 @@ def build_html():
                 {{ name: 'y', type: 'choice', description: 'Metric B: up on a scatter.', choices: metrics, current: ySelect.value }},
                 {{ name: 'showRecruits', type: 'boolean', description: 'Show UC Report recruits (false shows only drafted NFL players).', current: toggleRecruits.checked }},
                 {{ name: 'boardOnly', type: 'boolean', description: "Only recruits on Texas's recruiting board.", current: toggleBoardOnly.checked }},
+                {{ name: 'limits', type: 'ranges', description: 'Measurable limits: the players inside all of them are highlighted and listed (times in seconds, lower is faster; heights and lengths in inches; weight in lb).',
+                   choices: Object.keys(metricDefs).map(k => ({{ value: k, label: `${{metricDefs[k].label}} (${{metricDefs[k].unit}})` }})) }},
                 {{ name: 'player', type: 'text', description: 'A player to find and highlight (only when one is named).' }},
             ];
         }}
@@ -3006,8 +3019,11 @@ def build_html():
             if (v.chart && v.chart !== chartType.value) {{ chartType.value = v.chart; resetHistFilter(); }}
             if (typeof v.showRecruits === 'boolean') toggleRecruits.checked = v.showRecruits;
             if (typeof v.boardOnly === 'boolean') toggleBoardOnly.checked = v.boardOnly;
+            aiLimits = v.limits || [];
             updateSelectors();
             const has = (sel, value) => [...sel.options].some(o => o.value === value);
+            // limits on two metrics and no axes named: plot those two (the first up, the second across)
+            if (!v.x && !v.y && aiLimits.length >= 2 && chartType.value === 'scatter') {{ v.y = aiLimits[0].key; v.x = aiLimits[1].key; }}
             if (v.x && has(xSelect, v.x)) {{ xSelect.value = v.x; resetHistFilter(); }}
             if (v.y && has(ySelect, v.y)) ySelect.value = v.y;
             if (!yearPanel.hidden) renderYearPanel();
@@ -3025,7 +3041,9 @@ def build_html():
                 if (!res.ok || body.error) throw new Error(body.error || "Couldn't read that.");
                 if (body.unsupported) {{ aiNote.className = 'ai-note error'; aiNote.textContent = body.note || "These controls can't do that."; return; }}
                 aiApply(body.values || {{}});
-                aiNote.textContent = body.note ? `Read as: ${{body.note}}` : 'Filters set.';
+                const matched = aiLimits.length ? applyChartFilters(getFilteredPlayers()).filter(passesLimits).length : null;
+                aiNote.textContent = (body.note ? `Read as: ${{body.note}}` : 'Filters set.')
+                    + (matched === null ? '' : ` · ${{matched}} ${{matched === 1 ? 'player matches' : 'players match'}}${{chartType.value === 'scatter' ? ', highlighted' : ''}} (Clear Filter to undo)`);
             }} catch (err) {{
                 aiNote.className = 'ai-note error'; aiNote.textContent = err.message;
             }} finally {{
