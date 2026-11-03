@@ -926,6 +926,17 @@ def build_html():
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Texas Football</title>
     <script>if(window.self!==window.top){{document.documentElement.classList.add('embedded');}}</script>
+    <!-- Dark or light as chosen in Tars (Profile → Appearance), which this page shares storage with; changed there, it changes here -->
+    <script>
+        function tarsTheme() {{
+            let theme = 'light';
+            try {{ theme = localStorage.getItem('tars-theme') === 'dark' ? 'dark' : 'light'; }} catch (e) {{ /* storage blocked */ }}
+            document.documentElement.dataset.theme = theme;
+            document.documentElement.style.colorScheme = theme;
+        }}
+        tarsTheme();
+        window.addEventListener('storage', (e) => {{ if (e.key === 'tars-theme') {{ tarsTheme(); if (window.redrawForTheme) window.redrawForTheme(); }} }});
+    </script>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
@@ -1194,6 +1205,35 @@ def build_html():
             #print-title strong {{ display: block; font-size: 18px; color: #111; }}
         }}
         {theme_css}
+        /* Dark: Tars's dark colors */
+        html[data-theme="dark"] {{ --primary:#e86f17; --primary-dark:#bf5700; --bg-color:#151310; --card-bg:#211e1a; --text-dark:#f4efe4; --text-light:#b8afa3; --border:#8f8575; --nfl-blue:#8f8575; color-scheme:dark; }}
+        html[data-theme="dark"] body {{ background:#151310; color:#f4efe4; border-top-color:#060504; }}
+        html[data-theme="dark"] .panel {{ background:#211e1a; border-color:#8f8575; box-shadow:8px 8px 0 #000; }}
+        html[data-theme="dark"] .metric-card, html[data-theme="dark"] .player-card {{ background:#211e1a; border-color:#8f8575; color:#f4efe4; }}
+        html[data-theme="dark"] .year-filter-panel, html[data-theme="dark"] .player-search-dropdown, html[data-theme="dark"] .hover-tooltip {{ background:#211e1a; border-color:#8f8575; color:#f4efe4; box-shadow:4px 4px 0 #000; }}
+        html[data-theme="dark"] .hover-tooltip {{ border-left-color:#e86f17; }}
+        html[data-theme="dark"] .metric-value, html[data-theme="dark"] .pos-selector-nav label, html[data-theme="dark"] .control-group label,
+        html[data-theme="dark"] .search-result-name, html[data-theme="dark"] #player-highlight-name, html[data-theme="dark"] #player-highlight-status span[style*="#202020"] {{ color:#f4efe4 !important; }}
+        html[data-theme="dark"] .metric-title, html[data-theme="dark"] .footer, html[data-theme="dark"] .year-filter-panel .yf-count, html[data-theme="dark"] .search-result-sub,
+        html[data-theme="dark"] .search-empty-note, html[data-theme="dark"] .search-clear-btn, html[data-theme="dark"] #player-highlight-meta {{ color:#b8afa3 !important; }}
+        html[data-theme="dark"] #player-highlight-status span[style*="#c53030"] {{ color:#ff8a7a !important; }}
+        html[data-theme="dark"] #position-select, html[data-theme="dark"] select.control-select, html[data-theme="dark"] .year-filter-btn, html[data-theme="dark"] input.player-search-input {{ background:#29241f; color:#f4efe4; border-color:#8f8575; }}
+        html[data-theme="dark"] input.player-search-input::placeholder {{ color:#8f8575; }}
+        html[data-theme="dark"] #position-select:hover, html[data-theme="dark"] .year-filter-panel .yf-row:hover,
+        html[data-theme="dark"] .search-result-item:hover, html[data-theme="dark"] .search-result-item.selected {{ background:#4b2914; color:#f4efe4; }}
+        html[data-theme="dark"] .hint-text {{ background:#29241f; color:#b8afa3; border-color:#8f8575; }}
+        html[data-theme="dark"] .controls-row, html[data-theme="dark"] .card-header, html[data-theme="dark"] .year-filter-panel .yf-divider {{ border-color:#8f8575; }}
+        html[data-theme="dark"] .search-result-group-title {{ background:#29241f; color:#b8afa3; border-color:#8f8575; }}
+        html[data-theme="dark"] .search-result-item {{ border-bottom-color:#51483d; }}
+        html[data-theme="dark"] .search-result-name mark {{ background:#6b4a12; color:#f4efe4; }}
+        html[data-theme="dark"] .search-badge-pos, html[data-theme="dark"] .player-highlight-banner .btn-unhighlight {{ background:#8f8575; color:#151310; }}
+        html[data-theme="dark"] .player-highlight-banner {{ background:#4b2914; border-color:#8f8575; }}
+        html[data-theme="dark"] .player-highlight-banner strong {{ color:#ffb27a; }}
+        html[data-theme="dark"] .player-card:hover {{ background:#29241f; }}
+        html[data-theme="dark"] .player-card.card-highlighted {{ background:#2d1d10; border-color:#e86f17; box-shadow:4px 4px 0 #e86f17; }}
+        html[data-theme="dark"] .tag-nfl, html[data-theme="dark"] .tag-nfl-badge {{ background:#51483d; }}
+        html[data-theme="dark"] a.profile-link:hover {{ color:#ffb27a; }}
+        @media(max-width:680px) {{ html[data-theme="dark"] .panel {{ box-shadow:5px 5px 0 #000; }} }}
     </style>
 </head>
 <body>
@@ -1885,7 +1925,38 @@ def build_html():
         function drawFigure(traces, layout, config) {{
             const gd = document.getElementById('plot');
             if (gd.removeAllListeners) ['plotly_hover', 'plotly_unhover', 'plotly_click', 'plotly_selected'].forEach(e => gd.removeAllListeners(e));
-            return Plotly.react(gd, traces, layout, config);
+            return Plotly.react(gd, themed(traces), themed(layout), config);
+        }}
+
+        // In dark mode the chart's light colors become Tars's dark ones: white backgrounds turn the panel color and dot
+        // outlines grey (so navy team dots still show), dark text turns light, and the grid and pale bars darken. Team and Texas colors stay.
+        const DARK_BG = '#211e1a';
+        const DARK_COLORS = {{
+            background: {{ 'white': DARK_BG, '#fff': DARK_BG, '#ffffff': DARK_BG, 'rgba(255,255,255,0.8)': 'rgba(33,30,26,0.85)', 'rgba(255,255,255,0.75)': 'rgba(33,30,26,0.8)' }},
+            text: {{ '#202020': '#f4efe4', '#111': '#f4efe4', '#111111': '#f4efe4', '#706b64': '#b8afa3', '#4a5568': '#b8afa3', '#555': '#b8afa3' }},
+            line: {{ 'white': '#6b6257', '#4a5568': '#b8afa3', '#202020': '#151310' }},
+            fill: {{ '#e2e8f0': '#3a342d', '#d9cdbe': '#51483d' }},
+            border: {{ '#202020': '#8f8575', '#d9cdbe': '#51483d', '#9e4800': '#e86f17' }},
+        }};
+        const isDark = () => document.documentElement.dataset.theme === 'dark';
+        function themed(value, key = '', parent = '') {{
+            if (!isDark()) return value;
+            if (Array.isArray(value)) return value.map(v => themed(v, key, parent));
+            if (typeof value === 'string') {{
+                const kind = /bgcolor$/.test(key) ? 'background' : key === 'bordercolor' ? 'border'
+                    : key !== 'color' ? null : parent === 'font' ? 'text' : parent === 'line' ? 'line' : parent === 'marker' ? 'fill' : null;
+                const swap = kind && DARK_COLORS[kind][value.replace(/\s/g, '').toLowerCase()];
+                return swap || value;
+            }}
+            if (!value || typeof value !== 'object') return value;
+            const out = {{}};
+            for (const k of Object.keys(value)) out[k] = themed(value[k], k, key);
+            if (/^[xy]axis\d*$/.test(key)) {{
+                out.gridcolor = out.gridcolor || '#3a342d';
+                out.zerolinecolor = out.zerolinecolor || '#51483d';
+                out.linecolor = out.linecolor || '#8f8575';
+            }}
+            return out;
         }}
 
         function drawPlot() {{
@@ -2399,7 +2470,7 @@ def build_html():
                     nextLayout.xaxis.autorange = false;
                 }}
 
-                Plotly.react('plot', traces, nextLayout, {{ displaylogo: false }});
+                Plotly.react('plot', themed(traces), themed(nextLayout), {{ displaylogo: false }});
             }}
 
             function normalizeHistRange(xMin, xMax) {{
@@ -2830,7 +2901,12 @@ def build_html():
         // size that fills a landscape page, then back to fitting the window
         let savedLayout = null;
         const shownText = (sel) => sel && sel.selectedIndex >= 0 ? sel.options[sel.selectedIndex].text : '';
+        // The printout is always light: a dark page redraws the chart light first and goes back to dark after
+        let printedDark = false;
+        window.redrawForTheme = () => drawPlot();
         window.addEventListener('beforeprint', () => {{
+            printedDark = isDark();
+            if (printedDark) {{ document.documentElement.dataset.theme = 'light'; drawPlot(); }}
             const metrics = chartType.value === 'scatter' ? `${{shownText(ySelect)}} vs ${{shownText(xSelect)}}` : `${{shownText(xSelect)}} (histogram)`;
             const filters = [yearBtn.textContent.trim(), toggleRecruits.checked ? 'UCReport players shown' : '', toggleBoardOnly.checked ? 'board only' : '',
                              highlightedPlayer ? `highlighting ${{document.getElementById('player-highlight-name').textContent}}` : ''].filter(Boolean).join(' · ');
@@ -2885,6 +2961,7 @@ def build_html():
             if (savedLayout) {{ Plotly.relayout(gd, {{ annotations: savedLayout.annotations, showlegend: savedLayout.showlegend }}); savedLayout = null; }}
             delete gd.layout.width; delete gd.layout.height;
             Plotly.Plots.resize(gd);
+            if (printedDark) {{ printedDark = false; tarsTheme(); drawPlot(); }}
         }});
         document.getElementById('print-chart').onclick = () => window.print();
 
