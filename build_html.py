@@ -1196,7 +1196,7 @@ def build_html():
         @media print {{
             @page {{ size: letter landscape; margin: 0.4in; }}
             body {{ background: #fff !important; }}
-            .navbar, .workspace-heading, #top-metrics, .controls-row, .hover-tooltip, #player-search-dropdown, #year-filter-panel,
+            .navbar, .workspace-heading, #top-metrics, .controls-row, .ai-form, .hover-tooltip, #player-search-dropdown, #year-filter-panel,
             .panel:not(:has(#plot)), .panel-heading span {{ display: none !important; }}
             .container {{ max-width: none; padding: 0; margin: 0; }}
             .panel:has(#plot) {{ border: 0; box-shadow: none; padding: 0; margin: 0; }}
@@ -1205,6 +1205,17 @@ def build_html():
             #print-title strong {{ display: block; font-size: 18px; color: #111; }}
         }}
         {theme_css}
+        .ai-form {{ display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin:0 0 14px; }}
+        .ai-form[hidden] {{ display:none; }}
+        .ai-form input {{ flex:1 1 320px; border:2px solid #202020; background:#fff; color:#222; padding:10px; font:inherit; font-size:15px; }}
+        .ai-form button {{ display:block; }}
+        .ai-form button:disabled {{ opacity:.6; cursor:wait; }}
+        .ai-note {{ flex-basis:100%; font-size:13px; font-weight:700; color:#5c5a56; }}
+        .ai-note:empty {{ display:none; }}
+        .ai-note.error {{ color:#9a2c00; }}
+        html[data-theme="dark"] .ai-form input {{ background:#29241f; color:#f4efe4; border-color:#8f8575; }}
+        html[data-theme="dark"] .ai-note {{ color:#b8afa3; }}
+        html[data-theme="dark"] .ai-note.error {{ color:#ff8a7a; }}
         /* Dark: Tars's dark colors */
         html[data-theme="dark"] {{ --primary:#e86f17; --primary-dark:#bf5700; --bg-color:#151310; --card-bg:#211e1a; --text-dark:#f4efe4; --text-light:#b8afa3; --border:#8f8575; --nfl-blue:#8f8575; color-scheme:dark; }}
         html[data-theme="dark"] body {{ background:#151310; color:#f4efe4; border-top-color:#060504; }}
@@ -1261,6 +1272,12 @@ def build_html():
         
         <div class="panel">
             <div class="panel-heading"><h3>Athletic profile</h3><span>Explore measurables · Select players on the chart</span></div>
+            <!-- Inside Tars: type what to show and Tars's AI sets the controls below (Tars's /api/ai-filters, as on its Stats pages) -->
+            <form id="ai-form" class="ai-form" hidden>
+                <input type="text" id="ai-input" placeholder="Or type it: e.g. 2028 safeties, wingspan vs 40, board only…" maxlength="300" autocomplete="off" aria-label="Describe what to show">
+                <button type="submit" id="ai-submit" class="btn-clear">Set filters</button>
+                <span id="ai-note" class="ai-note" role="status"></span>
+            </form>
             <div class="controls-row">
                 <div class="control-group player-search-group">
                     <label for="player-search-input">Search Recruit / Player</label>
@@ -2964,6 +2981,57 @@ def build_html():
             if (printedDark) {{ printedDark = false; tarsTheme(); drawPlot(); }}
         }});
         document.getElementById('print-chart').onclick = () => window.print();
+
+        // The "type it" box (inside Tars only: Tars reads the request, signed in, at /api/ai-filters): the request is read
+        // into these controls, which change to show what it was read as. Anything it doesn't name stays as it is.
+        const aiForm = document.getElementById('ai-form'), aiInput = document.getElementById('ai-input');
+        const aiSubmit = document.getElementById('ai-submit'), aiNote = document.getElementById('ai-note');
+        aiForm.hidden = !IN_TARS;
+        function aiFields() {{
+            const metrics = Object.keys(metricDefs).map(k => ({{ value: k, label: metricDefs[k].label }}));
+            return [
+                {{ name: 'position', type: 'choice', description: 'Position group.', choices: [...posSelect.options].map(o => ({{ value: o.value, label: o.text }})), current: currentPos }},
+                {{ name: 'years', type: 'choices', description: "The recruits' high school graduation classes to show (drafted NFL players always show).", choices: [...yearCountsForCurrentPos().keys()].sort().map(y => ({{ value: String(y) }})), current: [...selectedYears].map(String) }},
+                {{ name: 'chart', type: 'choice', description: 'A scatter plot of two metrics, or a histogram of one.', choices: [...chartType.options].map(o => ({{ value: o.value, label: o.text }})), current: chartType.value }},
+                {{ name: 'x', type: 'choice', description: 'Metric A: across on a scatter (in "A vs B" B is across), or the metric of a histogram.', choices: metrics, current: xSelect.value }},
+                {{ name: 'y', type: 'choice', description: 'Metric B: up on a scatter.', choices: metrics, current: ySelect.value }},
+                {{ name: 'showRecruits', type: 'boolean', description: 'Show UC Report recruits (false shows only drafted NFL players).', current: toggleRecruits.checked }},
+                {{ name: 'boardOnly', type: 'boolean', description: "Only recruits on Texas's recruiting board.", current: toggleBoardOnly.checked }},
+                {{ name: 'player', type: 'text', description: 'A player to find and highlight (only when one is named).' }},
+            ];
+        }}
+        function aiApply(v) {{
+            if (v.position && v.position !== currentPos && posData[v.position]) {{ posSelect.value = v.position; currentPos = v.position; resetHistFilter(); }}
+            if (v.years) {{ selectedYears = new Set(v.years.map(Number)); updateYearButtonLabel(); }}
+            if (v.chart && v.chart !== chartType.value) {{ chartType.value = v.chart; resetHistFilter(); }}
+            if (typeof v.showRecruits === 'boolean') toggleRecruits.checked = v.showRecruits;
+            if (typeof v.boardOnly === 'boolean') toggleBoardOnly.checked = v.boardOnly;
+            updateSelectors();
+            const has = (sel, value) => [...sel.options].some(o => o.value === value);
+            if (v.x && has(xSelect, v.x)) {{ xSelect.value = v.x; resetHistFilter(); }}
+            if (v.y && has(ySelect, v.y)) ySelect.value = v.y;
+            if (!yearPanel.hidden) renderYearPanel();
+            init();
+            if (v.player) {{ playerSearchInput.value = v.player; handlePlayerSearch(); }}
+        }}
+        aiForm.onsubmit = async (e) => {{
+            e.preventDefault();
+            const question = aiInput.value.trim();
+            if (!question) return;
+            aiSubmit.disabled = true; aiSubmit.textContent = 'Reading…'; aiNote.className = 'ai-note'; aiNote.textContent = '';
+            try {{
+                const res = await fetch('/api/ai-filters', {{ method: 'POST', headers: {{ 'Content-Type': 'application/json' }}, body: JSON.stringify({{ page: 'Scouting dashboard', question, fields: aiFields() }}) }});
+                const body = await res.json();
+                if (!res.ok || body.error) throw new Error(body.error || "Couldn't read that.");
+                if (body.unsupported) {{ aiNote.className = 'ai-note error'; aiNote.textContent = body.note || "These controls can't do that."; return; }}
+                aiApply(body.values || {{}});
+                aiNote.textContent = body.note ? `Read as: ${{body.note}}` : 'Filters set.';
+            }} catch (err) {{
+                aiNote.className = 'ai-note error'; aiNote.textContent = err.message;
+            }} finally {{
+                aiSubmit.disabled = false; aiSubmit.textContent = 'Set filters';
+            }}
+        }};
 
         init();
     </script>
