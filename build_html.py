@@ -1196,7 +1196,7 @@ def build_html():
         @media print {{
             @page {{ size: letter landscape; margin: 0.4in; }}
             body {{ background: #fff !important; }}
-            .navbar, .workspace-heading, #top-metrics, .controls-row, .ai-form, .hover-tooltip, #player-search-dropdown, #year-filter-panel,
+            .navbar, .workspace-heading, #top-metrics, .controls-row, .hover-tooltip, #player-search-dropdown, #year-filter-panel,
             .panel:not(:has(#plot)), .panel-heading span {{ display: none !important; }}
             .container {{ max-width: none; padding: 0; margin: 0; }}
             .panel:has(#plot) {{ border: 0; box-shadow: none; padding: 0; margin: 0; }}
@@ -1205,17 +1205,6 @@ def build_html():
             #print-title strong {{ display: block; font-size: 18px; color: #111; }}
         }}
         {theme_css}
-        .ai-form {{ display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin:0 0 14px; }}
-        .ai-form[hidden] {{ display:none; }}
-        .ai-form input {{ flex:1 1 320px; border:2px solid #202020; background:#fff; color:#222; padding:10px; font:inherit; font-size:15px; }}
-        .ai-form button {{ display:block; }}
-        .ai-form button:disabled {{ opacity:.6; cursor:wait; }}
-        .ai-note {{ flex-basis:100%; font-size:13px; font-weight:700; color:#5c5a56; }}
-        .ai-note:empty {{ display:none; }}
-        .ai-note.error {{ color:#9a2c00; }}
-        html[data-theme="dark"] .ai-form input {{ background:#29241f; color:#f4efe4; border-color:#8f8575; }}
-        html[data-theme="dark"] .ai-note {{ color:#b8afa3; }}
-        html[data-theme="dark"] .ai-note.error {{ color:#ff8a7a; }}
         /* Dark: Tars's dark colors */
         html[data-theme="dark"] {{ --primary:#e86f17; --primary-dark:#bf5700; --bg-color:#151310; --card-bg:#211e1a; --text-dark:#f4efe4; --text-light:#b8afa3; --border:#8f8575; --nfl-blue:#8f8575; color-scheme:dark; }}
         html[data-theme="dark"] body {{ background:#151310; color:#f4efe4; border-top-color:#060504; }}
@@ -1272,12 +1261,6 @@ def build_html():
         
         <div class="panel">
             <div class="panel-heading"><h3>Athletic profile</h3><span>Explore measurables · Select players on the chart</span></div>
-            <!-- Inside Tars: type what to show and Tars's AI sets the controls below (Tars's /api/ai-filters, as on its Stats pages) -->
-            <form id="ai-form" class="ai-form" hidden>
-                <input type="text" id="ai-input" placeholder="Or type it: e.g. 2028 safeties, wingspan vs 40, board only…" maxlength="300" autocomplete="off" aria-label="Describe what to show">
-                <button type="submit" id="ai-submit" class="btn-clear">Set filters</button>
-                <span id="ai-note" class="ai-note" role="status"></span>
-            </form>
             <div class="controls-row">
                 <div class="control-group player-search-group">
                     <label for="player-search-input">Search Recruit / Player</label>
@@ -2993,11 +2976,9 @@ def build_html():
         }});
         document.getElementById('print-chart').onclick = () => window.print();
 
-        // The "type it" box (inside Tars only: Tars reads the request, signed in, at /api/ai-filters): the request is read
-        // into these controls, which change to show what it was read as. Anything it doesn't name stays as it is.
-        const aiForm = document.getElementById('ai-form'), aiInput = document.getElementById('ai-input');
-        const aiSubmit = document.getElementById('ai-submit'), aiNote = document.getElementById('ai-note');
-        aiForm.hidden = !IN_TARS;
+        // Tars's assistant (components/assistant.tsx, inside Tars only) sets these controls: it asks for them
+        // ('tars-ai-fields'), has the request read into them (Tars's /api/ai-filters) and sends the reading back
+        // ('tars-ai-apply'); the controls change to show it. Anything it doesn't name stays as it is.
         function aiFields() {{
             const metrics = Object.keys(metricDefs).map(k => ({{ value: k, label: metricDefs[k].label }}));
             return [
@@ -3030,26 +3011,16 @@ def build_html():
             init();
             if (v.player) {{ playerSearchInput.value = v.player; handlePlayerSearch(); }}
         }}
-        aiForm.onsubmit = async (e) => {{
-            e.preventDefault();
-            const question = aiInput.value.trim();
-            if (!question) return;
-            aiSubmit.disabled = true; aiSubmit.textContent = 'Reading…'; aiNote.className = 'ai-note'; aiNote.textContent = '';
-            try {{
-                const res = await fetch('/api/ai-filters', {{ method: 'POST', headers: {{ 'Content-Type': 'application/json' }}, body: JSON.stringify({{ page: 'Scouting dashboard', question, fields: aiFields() }}) }});
-                const body = await res.json();
-                if (!res.ok || body.error) throw new Error(body.error || "Couldn't read that.");
-                if (body.unsupported) {{ aiNote.className = 'ai-note error'; aiNote.textContent = body.note || "These controls can't do that."; return; }}
-                aiApply(body.values || {{}});
+        window.addEventListener('message', (e) => {{
+            if (e.origin !== window.location.origin || e.source !== window.parent || !e.data || !e.data.id) return;
+            const reply = (result) => window.parent.postMessage({{ type: e.data.type, id: e.data.id, result }}, window.location.origin);
+            if (e.data.type === 'tars-ai-fields') reply(aiFields());
+            else if (e.data.type === 'tars-ai-apply') {{
+                aiApply(e.data.values || {{}});
                 const matched = aiLimits.length ? applyChartFilters(getFilteredPlayers()).filter(passesLimits).length : null;
-                aiNote.textContent = (body.note ? `Read as: ${{body.note}}` : 'Filters set.')
-                    + (matched === null ? '' : ` · ${{matched}} ${{matched === 1 ? 'player matches' : 'players match'}}${{chartType.value === 'scatter' ? ', highlighted' : ''}} (Clear Filter to undo)`);
-            }} catch (err) {{
-                aiNote.className = 'ai-note error'; aiNote.textContent = err.message;
-            }} finally {{
-                aiSubmit.disabled = false; aiSubmit.textContent = 'Set filters';
+                reply(matched === null ? '' : `${{matched}} ${{matched === 1 ? 'player matches' : 'players match'}}${{chartType.value === 'scatter' ? ', highlighted' : ''}} (Clear Filter to undo)`);
             }}
-        }};
+        }});
 
         init();
     </script>
