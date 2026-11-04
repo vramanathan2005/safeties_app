@@ -930,12 +930,13 @@ def build_html():
     <script>
         function tarsTheme() {{
             let theme = 'light';
-            try {{ theme = localStorage.getItem('tars-theme') === 'dark' ? 'dark' : 'light'; }} catch (e) {{ /* storage blocked */ }}
+            // Auto (sunrise to sunset in Austin) is worked out by Tars, which saves the result as tars-theme-now
+            try {{ const saved = localStorage.getItem('tars-theme'); theme = (saved === 'auto' ? localStorage.getItem('tars-theme-now') : saved) === 'dark' ? 'dark' : 'light'; }} catch (e) {{ /* storage blocked */ }}
             document.documentElement.dataset.theme = theme;
             document.documentElement.style.colorScheme = theme;
         }}
         tarsTheme();
-        window.addEventListener('storage', (e) => {{ if (e.key === 'tars-theme') {{ tarsTheme(); if (window.redrawForTheme) window.redrawForTheme(); }} }});
+        window.addEventListener('storage', (e) => {{ if (e.key === 'tars-theme' || e.key === 'tars-theme-now') {{ tarsTheme(); if (window.redrawForTheme) window.redrawForTheme(); }} }});
     </script>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
